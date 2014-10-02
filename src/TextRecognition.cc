@@ -118,9 +118,9 @@ void TextRecognition::test(void){
     }
     
   }
-  
+  std::cout << "here1" << std::endl;
   normalise(textImage);
-  
+  std::cout << "here2" << std::endl;
   cv::imshow( "Display window", textImage);
   cv::waitKey(0);
 }
@@ -259,11 +259,11 @@ void TextRecognition::computeFeatureRepresentation(cv::Mat1f & subimage, cv::Mat
   
   //extract 8*8 subsubimages
 
-    for(int k = 0; k < subimage.size().width - 7; ++k){
-      for( int l = 0; l < subimage.size().height - 7; ++l){
+    for(int k = 0; k < subimage.size().height - 7; ++k){
+      for( int l = 0; l < subimage.size().width - 7; ++l){
 	
 	//extract subsubimages
-	cv::Mat1f subsubimage = subimage(cv::Range(l,l+8), cv::Range(k,k+8)).clone();
+	cv::Mat1f subsubimage = subimage(cv::Range(k,k+8), cv::Range(l,l+8)).clone();
 	
 	//normalise and zca whiten
 	// TODO: normalize correctly, i.e. zca whitening over all (or many random) train patches
@@ -279,18 +279,25 @@ void TextRecognition::computeFeatureRepresentation(cv::Mat1f & subimage, cv::Mat
 	// TODO: max(..., alpha)  
       }
     }
-
-  features = features.reshape(0,625);
+  
+  //std::cout << features.size() << std::endl;
   //std::cout << "features size = " << features.size() << std::endl;
-  cv::Mat1f features2;
+  cv:: Mat1f features2 = features.reshape(0,625);
+  //std::cout << features.row(1) << std::endl;
+  //std::cout << "features size = " << features2.size() << std::endl;
+  cv::Mat1f features3;
   for( int m = 0; m < parameters.getIntParameter("dictionary_length"); ++m){
-    cv::Mat1f temp = features*(dict.centers.row(m).reshape(0,64));
-    features2.push_back(temp);
+    cv::Mat1f temp = features2*(dict.centers.row(m).reshape(0,64));
+    features3.push_back(temp);
   }
   //reshape so each row is the result the dot product of each 8*8 subsubimage with a single dictionary element 
-  features2 = features2.reshape(0,parameters.getIntParameter("dictionary_length"));
+  cv::Mat1f features4 = features3.reshape(0,parameters.getIntParameter("dictionary_length"));
+//   std::cout << "features4 size = " << features4.size() << std::endl;
+//   //std::cout << features4 << std::endl;
+//   std::cout << (dict.centers.row(0)).reshape(0,8) << std::endl;
+//   std::cout << "centers size = " << dict.centers.size() << std::endl;
   // TODO: test shape of reducedfeatures //DONE
-  reduceFeatures(features2, reducedfeatures);
+  reduceFeatures(features4, reducedfeatures);
 }
 
 void TextRecognition::reduceFeatures( cv::Mat1f & featurerepresentation, cv::Mat1f & reducedfeatures ){
@@ -298,12 +305,14 @@ void TextRecognition::reduceFeatures( cv::Mat1f & featurerepresentation, cv::Mat
   for( int i = 0; i < parameters.getIntParameter("dictionary_length"); ++i){
     
     cv::Mat1f dictmatrix = featurerepresentation.row(i);
-    dictmatrix = dictmatrix.reshape(0,25);
+    //std::cout << "dictmatrix = " << dictmatrix.size() << std::endl;
+    cv::Mat1f dictmatrix2 = dictmatrix.reshape(0,25);
+    //std::cout << dictmatrix2 << std::endl;
     
     for(int k = 0; k < 3; ++k){
       for(int l = 0; l < 3; ++l){
 	
-	reducedfeatures.push_back( cv::sum(dictmatrix(cv::Range(k*8, k*8+9), cv::Range(l*8,l*8+9)))[0] );
+	reducedfeatures.push_back( (cv::sum(dictmatrix2(cv::Range(k*8, k*8+9), cv::Range(l*8,l*8+9)))[0]) );
 	
       }
     }
@@ -318,15 +327,25 @@ void TextRecognition::normalise( cv::Mat1f & matrix ){
   cv::Scalar stddev;
   cv::meanStdDev(matrix, matmean, stddev);
   cv::subtract(matrix, matmean[0], matrix);
-  
+  //std::cout << "here1.1" << std::endl;
   // FIXME
   //contrast normalise and remap to 0-1 range
   cv::meanStdDev(matrix, matmean, stddev);
   if( stddev[0] != 0.0 ){
     matrix = matrix*(0.5/(1.0*stddev[0]));
-    cv::add(matrix, 0.5, matrix);
   }
-  
+  //std::cout << "here1.2" << std::endl;
+  cv::add(matrix, 0.5, matrix);
+  //std::cout << "here1.3" << std::endl;
+  for(int i=0; i<matrix.size().width; ++i){
+    for(int j=0; j<matrix.size().height; ++j){
+      if( matrix.at<float>(j,i) < 0.0 )
+	matrix.at<float>(j,i) = 0.0;
+      else if ( matrix.at<float>(j,i) > 1)
+	matrix.at<float>(j,i) = 1.0;      
+    }
+  }
+  //std::cout << "here1.4" << std::endl;
 }
 
 void TextRecognition::zcaWhiten( cv::Mat1f & matrix){

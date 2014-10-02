@@ -33,15 +33,18 @@ public:
   void loadTrainData( void );
   void test(void);
 
+  
+  void normalise( cv::Mat1f & matrix );
+  void zcaWhiten( cv::Mat1f & matrix);
+  void computeFeatureRepresentation(cv::Mat1f & subimage, cv::Mat1f & reducedfeatures );
 private:
 
   void readLocationData(void);
   bool isText(std::string imageName, int x, int y, int boxSize);
   void printText(std::string imageName);
-  void computeFeatureRepresentation(cv::Mat1f & subimage, cv::Mat1f & reducedfeatures );
   void reduceFeatures( cv::Mat1f & featurerepresentation, cv::Mat1f & reducedfeatures );
-  void normalise( cv::Mat1f & matrix );
-  void zcaWhiten( cv::Mat1f & matrix);
+  
+  
   void saveTrainData(void);
   void readTrainData(void);
   

@@ -3,6 +3,6 @@ find_package( OpenCV REQUIRED )
 include_directories( ${OpenCV_INCLUDE_DIRS} )
 include_directories( ../src )
 
-add_executable( frestest ../src/FileReader.cc ../src/Debug.cc ../src/Array.cc ../src/TextRecognition.cc ../src/Dictionary.cc ../src/main.cc )
+add_executable( frestest ../src/FileReader.cc ../src/Debug.cc ../src/Array.cc ../src/TextRecognition.cc ../src/Dictionary.cc ../tests/frestest.cc )
 
 target_link_libraries( frestest ${OpenCV_LIBS} )

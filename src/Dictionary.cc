@@ -37,7 +37,6 @@ void Dictionary::generate(){
   // TODO: save centers and everything in float32 CV_32F, cv::Mat1f or cv::Mat_<float>  //DONE
 }
 
-
 void Dictionary::printfiles(){
   
   //calculate parameters to scale images to the 0-255 range
