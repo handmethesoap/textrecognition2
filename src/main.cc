@@ -11,9 +11,11 @@ int main( int argc, char** argv )
   
   //Register parameters to be read from file
   parameters.registerStringParameter("recognition_train_path");
+  parameters.registerStringParameter("test_path");
   parameters.registerStringParameter("train_file");	
   parameters.registerStringParameter("test_file");	
   parameters.registerStringParameter("data_file");
+  parameters.registerStringParameter("scores_file");
   
   parameters.registerIntParameter("kmeans_attempts");
   parameters.registerIntParameter("kmeans_iter");
@@ -42,16 +44,15 @@ int main( int argc, char** argv )
   TextRecognition recogniseText(parameters, dict);
   
   //Train text recogniser
-  if(parameters.getIntParameter("train_bit") == 1){
-    recogniseText.train();
-  }
-  else{
-    recogniseText.loadTrainData();
-  }
+//   if(parameters.getIntParameter("train_bit") == 1){
+//     recogniseText.train();
+//   }
+//   else{
+//     recogniseText.loadTrainData();
+//   }
+//   
+//   recogniseText.testAll();
   
-  recogniseText.test();
-  
-  
-  
+  recogniseText.readScores();
   return 0;
 }

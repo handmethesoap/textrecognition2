@@ -11,7 +11,8 @@ class TextRecognition {
 public:
   TextRecognition(const FileReader & conf, const Dictionary & d) : parameters(conf), dict(d){
     
-    readLocationData();
+    readLocationData(parameters.getStringParameter("recognition_train_path") + "locations.xml", trainImageNames, trainTextBoxes);
+    readLocationData(parameters.getStringParameter("test_path") + "locations.xml", testImageNames, testTextBoxes);
     
     svmparams.svm_type    = CvSVM::C_SVC;
     svmparams.kernel_type = CvSVM::LINEAR;
@@ -21,7 +22,7 @@ public:
 
   ~TextRecognition(void){
     
-    for(std::vector<cv::Rect*>* it2 : textBoxes){
+    for(std::vector<cv::Rect*>* it2 : trainTextBoxes){
       for(cv::Rect* it3 : *it2){
 	delete(it3);
       }
@@ -31,23 +32,27 @@ public:
   
   void train(void);
   void loadTrainData( void );
-  void test(void);
-
+  void test(std::string testFile);
+  void testAll(void);
+  void readScores(void);
   
   void normalise( cv::Mat1f & matrix );
   void zcaWhiten( cv::Mat1f & matrix);
   void computeFeatureRepresentation(cv::Mat1f & subimage, cv::Mat1f & reducedfeatures );
+  void printText(std::string image);
 private:
 
-  void readLocationData(void);
-  bool isText(std::string imageName, int x, int y, int boxSize);
-  void printText(std::string imageName);
+  void readLocationData(std::string fileName, std::vector<std::string> & imageNames, std::vector<std::vector<cv::Rect*>*> & textBoxes);
+  bool isText(std::string imageName, int x, int y, int boxSize, std::vector<std::string> & imageNames, std::vector<std::vector<cv::Rect*>*> & textBoxes);
+
   void reduceFeatures( cv::Mat1f & featurerepresentation, cv::Mat1f & reducedfeatures );
   
   
   void saveTrainData(void);
   void readTrainData(void);
   
+  void storeScores(cv::Mat1f & image, std::string imageName);
+  void saveScores(void);
   
   const FileReader & parameters;
   const Dictionary & dict;
@@ -55,8 +60,15 @@ private:
   cv::SVM linearSVM;
   cv::SVMParams svmparams;
   
-  std::vector<std::string> imageNames;
-  std::vector<std::vector<cv::Rect*>*> textBoxes;
+  std::vector<std::string> trainImageNames;
+  std::vector<std::vector<cv::Rect*>*> trainTextBoxes;
+  
+  std::vector<std::string> testImageNames;
+  std::vector<std::vector<cv::Rect*>*> testTextBoxes;
+  
+  cv::Mat textScores;
+  cv::Mat nonTextScores;
+  
   cv::Mat traindata;
   cv::Mat datatype;
   

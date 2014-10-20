@@ -10,10 +10,10 @@ void TextRecognition::train(void){
   int notext_samples = 0;
   uint image_n = 0;
   
-  while( (image_n < imageNames.size()) && ((notext_samples < sample_max) || (text_samples < sample_max)) )
+  while( (image_n < trainImageNames.size()) && ((notext_samples < sample_max) || (text_samples < sample_max)) )
   {
     
-    cv::Mat1f trainImage = cv::imread(  parameters.getStringParameter("recognition_train_path") + imageNames[image_n] , cv::IMREAD_GRAYSCALE );
+    cv::Mat1f trainImage = cv::imread(  parameters.getStringParameter("recognition_train_path") + trainImageNames[image_n] , cv::IMREAD_GRAYSCALE );
     trainImage = trainImage/255;
     
     
@@ -23,7 +23,7 @@ void TextRecognition::train(void){
     for(int j = 0; j < trainImage.size().height - w_size; j+=(w_size/4)){
       for(int i = 0; i < trainImage.size().width - w_size; i+=(w_size/4)){
 	
-	  bool type = isText(imageNames[image_n], i, j, w_size);
+	  bool type = isText(trainImageNames[image_n], i, j, w_size, trainImageNames, trainTextBoxes);
 	  
 	  if( (type == 0) && (notext_samples < sample_max) ){
 	    ++notext_samples;
@@ -67,9 +67,10 @@ void TextRecognition::train(void){
   }
 }
 
-void TextRecognition::test(void){
+void TextRecognition::test(std::string testFile){
   
-  cv::Mat1f testImage = cv::imread(  parameters.getStringParameter("recognition_train_path") + parameters.getStringParameter("test_file") , cv::IMREAD_GRAYSCALE );
+  cv::Mat1f testImage = cv::imread(  parameters.getStringParameter("test_path") + testFile , cv::IMREAD_GRAYSCALE );
+  std::cout << testImage.size().width << ", " << testImage.size().height << std::endl;
   testImage = testImage/255;
   //normalise(testImage);
   
@@ -89,9 +90,19 @@ void TextRecognition::test(void){
   
     for(int j = 0; j <= testImage.size().height - w_size; j+=w_size){
       
+      if(testImage.size().height < w_size){
+	break;
+      }
+      
       for(int i = 0; i <= testImage.size().width - w_size; i+=w_size){
-	
+	  
+	  if(testImage.size().width < w_size){
+	    break;
+	  }
+	  
+	  //std::cout << testImage.size().width << ", " << testImage.size().height << ", " << i << ", " << j << std::endl;
 	  cv::Mat1f usubimage = testImage(cv::Range(j,j+w_size), cv::Range(i,i+w_size)).clone();
+	  //std::cout << "here1.1" << std::endl;
 	  cv::Mat1f subimage(32,32);
 	  cv::resize(usubimage, subimage, subimage.size());
 	  
@@ -103,32 +114,31 @@ void TextRecognition::test(void){
 	  reducedfeatures.convertTo(reducedfeatures2, CV_32F);
 	  
 	  float predictResult = linearSVM.predict(reducedfeatures2.reshape(0,1), true);
-	  
 	  cv::max(imageMask*predictResult, textImage(cv::Range(j,j+w_size), cv::Range(i,i+w_size)), textImage(cv::Range(j,j+w_size), cv::Range(i,i+w_size)));
 		  
 	  //adjust iterators in order to process edges of image
 	  if( ((testImage.size().width - 2*w_size) < i) && (i < (testImage.size().width - w_size)) ){
 	    i = testImage.size().width - (2*w_size); 
 	  }
-	  if( ((testImage.size().height - 2*w_size) < j) && (j < (testImage.size().height - w_size)) ){
-	    j = testImage.size().height - (2*w_size); 
-	  }
       }
       
+      if( ((testImage.size().height - 2*w_size) < j) && (j < (testImage.size().height - w_size)) ){
+	j = testImage.size().height - (2*w_size); 
+      }
     }
     
   }
-  std::cout << "here1" << std::endl;
-  normalise(textImage);
-  std::cout << "here2" << std::endl;
-  cv::imshow( "Display window", textImage);
-  cv::waitKey(0);
+  storeScores(textImage, testFile);
+//   normalise(textImage);
+//   
+//   cv::namedWindow( "Display window", cv::WINDOW_NORMAL );// Create a window for display.
+//   cv::imshow( "Display window", textImage);
+//   cv::waitKey(0);
 }
 
-void TextRecognition::readLocationData(void){
+void TextRecognition::readLocationData(std::string fileName, std::vector<std::string> & imageNames, std::vector<std::vector<cv::Rect*>*> & textBoxes){
   
   //open text file containing image file data
-  std::string fileName = parameters.getStringParameter("recognition_train_path") + "locations.xml";
   std::ifstream infile(fileName.c_str());
   CHECK_MSG(infile.good(),"Error reading '" << fileName << "'.  Please check file exists and is named correctly");
   int numimages = 0;
@@ -206,7 +216,7 @@ void TextRecognition::readLocationData(void){
   
 }
 
-bool TextRecognition::isText(std::string imageName, int x, int y, int boxSize){
+bool TextRecognition::isText(std::string imageName, int x, int y, int boxSize, std::vector<std::string> & imageNames, std::vector<std::vector<cv::Rect*>*> & textBoxes){
   
   auto it = find(imageNames.begin(), imageNames.end(), imageName);
   
@@ -236,17 +246,17 @@ bool TextRecognition::isText(std::string imageName, int x, int y, int boxSize){
 }
 
 void TextRecognition::printText(std::string imageName){
-  cv::Mat image = cv::imread(  parameters.getStringParameter("recognition_train_path") + imageName , cv::IMREAD_GRAYSCALE );
+  cv::Mat image = cv::imread(  parameters.getStringParameter("test_path") + imageName , cv::IMREAD_GRAYSCALE );
   
   for(int j = 0; j < image.size().height; ++j){
     for(int i = 0; i < image.size().width; ++i){
-      if(isText(imageName, i, j, 1) != 1){
+      if(isText(imageName, i, j, 1, testImageNames, testTextBoxes) != 1){
 	image.at<uchar>(j,i) = 255;
       }
     }
   }
 	
-  cv::namedWindow( "Display window", cv::WINDOW_AUTOSIZE );// Create a window for display.
+  cv::namedWindow( "Display window", cv::WINDOW_NORMAL );// Create a window for display.
   cv::imshow( "Display window", image );  
   cv::waitKey(0);   
 }
@@ -269,7 +279,7 @@ void TextRecognition::computeFeatureRepresentation(cv::Mat1f & subimage, cv::Mat
 	// TODO: normalize correctly, i.e. zca whitening over all (or many random) train patches
 	// save w and u and use that w and u to transform now this particular subimage
 	normalise(subsubimage);
-	zcaWhiten( subsubimage );
+	//zcaWhiten( subsubimage );
 	
 	
 	//compute dot product with dictionary
@@ -437,4 +447,84 @@ void TextRecognition::readTrainData(void){
   }    
   
   infile.close();
+}
+
+void TextRecognition::storeScores(cv::Mat1f & image, std::string imageName){
+  for(int j = 0; j < image.size().height; ++j){
+    for(int i = 0; i < image.size().width; ++i){
+      if(isText(imageName, i, j, 1, testImageNames, testTextBoxes)){
+	textScores.push_back(image.at<uchar>(j,i));
+      }
+      else{
+	nonTextScores.push_back(image.at<uchar>(j,i));
+      }
+    }
+  }
+}
+
+void TextRecognition::saveScores(void){
+  std::ofstream outputfile;
+  outputfile.open( parameters.getStringParameter("scores_file") );
+  
+  outputfile << textScores << std::endl;
+  outputfile << "nonTextScores" << std::endl;
+  outputfile << nonTextScores << std::endl;
+  
+  outputfile.close();
+}
+
+void TextRecognition::readScores(void){
+  std::ifstream infile;
+  infile.open( parameters.getStringParameter("scores_file") );
+  cv::Mat *outputmatrix = &textScores;
+  int num;
+  
+  std::cout << "loading scores file" << std::endl;
+  
+  while (!infile.eof()){
+    std::string line, param;
+    std::string file;
+    std::stringstream tt;
+    cv::Mat row;
+    getline(infile,line);
+    tt<<line;
+    while( tt>>param ){
+      if(param == "non"){
+	std::cout << "loading non text scores" << std::endl;
+	outputmatrix = &nonTextScores;
+	break;
+      }
+      
+      if( param[0] == '[' ){
+	std::istringstream(param.substr(param.find('[')+1)) >> num;
+	row.push_back(num);
+      }
+      else if( param.find(']') != std::string::npos ){
+	std::istringstream(param.erase(param.find(']'))) >> num;
+	row.push_back(num);
+	break;
+      }
+      else{
+	std::istringstream(param) >> num;
+	row.push_back(num);
+      }
+    }
+    if((param != "non") && (param != "")){
+      std::cout << "saving line" << std::endl;
+      outputmatrix->push_back(row.reshape(0,1));
+    }
+  }    
+  
+  infile.close();
+  
+  std::cout << textScores.size() << ", " << nonTextScores.size() << std::endl;
+}
+
+void TextRecognition:: testAll(void){
+  
+  for( uint i = 0; i < testImageNames.size(); ++i){
+    std::cout << "-----Testing image " << i << " of " << testImageNames.size() << "-----" << std::endl;
+    test(testImageNames[i]);
+  }
+  saveScores();
 }
