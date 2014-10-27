@@ -16,6 +16,7 @@ int main( int argc, char** argv )
   parameters.registerStringParameter("test_file");	
   parameters.registerStringParameter("data_file");
   parameters.registerStringParameter("scores_file");
+  parameters.registerStringParameter("graph_file");
   
   parameters.registerIntParameter("kmeans_attempts");
   parameters.registerIntParameter("kmeans_iter");
@@ -43,16 +44,17 @@ int main( int argc, char** argv )
   dict.read();
   TextRecognition recogniseText(parameters, dict);
   
-  //Train text recogniser
-//   if(parameters.getIntParameter("train_bit") == 1){
-//     recogniseText.train();
-//   }
-//   else{
-//     recogniseText.loadTrainData();
-//   }
-//   
+//   Train text recogniser
+  if(parameters.getIntParameter("train_bit") == 1){
+    recogniseText.train();
+  }
+  else{
+    recogniseText.loadTrainData();
+  }
+  recogniseText.testAll();
+  //recogniseText.readScores();
 //   recogniseText.testAll();
   
-  recogniseText.readScores();
+//   recogniseText.readScores();
   return 0;
 }

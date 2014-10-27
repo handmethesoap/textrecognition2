@@ -7,6 +7,8 @@
 
 void Dictionary::generate(){
   
+  std::cout << "-----Generating Dictionary-----" << std::endl;
+  
   cv::Mat samples;
   cv::Mat labels;
   cv::TermCriteria criteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, parameters.getIntParameter("kmeans_iter"), parameters.getRealParameter("kmeans_eps"));
@@ -30,11 +32,9 @@ void Dictionary::generate(){
   std::cout << "Performing kmeans calculation" << std::endl;
   cv::kmeans(samples, parameters.getIntParameter("dictionary_length"), labels, criteria, parameters.getIntParameter("kmeans_attempts"), cv::KMEANS_PP_CENTERS, centers);
 
-  std::cout << centers.rows << ", " << centers.cols << std::endl;
-  
+  //save dictionary images to file
   printfiles();
 
-  // TODO: save centers and everything in float32 CV_32F, cv::Mat1f or cv::Mat_<float>  //DONE
 }
 
 void Dictionary::printfiles(){
@@ -82,14 +82,14 @@ void Dictionary::printfiles(){
 }
 
 void Dictionary::read(){
-  
+  std::cout << "-----Loading Dictionary-----" << std::endl;
   //int sz = 64;
   
   for(int i = 0; i < parameters.getIntParameter("dictionary_length"); ++ i){
     cv::Mat1f image;
     std::stringstream tt;
     std::string name;
-    
+    std::cout << "reading dictionary element " << i+1 << " of " << parameters.getIntParameter("dictionary_length") << std::endl;
     tt << parameters.getStringParameter("dictionary_save_path") << i << ".jpg";
     tt >> name;
     
@@ -107,43 +107,43 @@ void Dictionary::read(){
   ss << parameters.getStringParameter("dictionary_save_path") << "zcadata.txt";
   ss >> name;
   
-  infile.open( name );
-  cv::Mat *outputmatrix = &u;
-  float num;
-  
-  while (!infile.eof()){
-    std::string line, param;
-    std::string file;
-    std::stringstream tt;
-    cv::Mat row;
-    getline(infile,line);
-    tt<<line;
-    while( tt>>param ){
-      if(param == "w"){
-	outputmatrix = &w;
-	break;
-      }
-      
-      if( param[0] == '[' ){
-	std::istringstream(param.substr(param.find('[')+1)) >> num;
-	row.push_back(num);
-      }
-      else if( param.find(']') != std::string::npos ){
-	std::istringstream(param.erase(param.find(']'))) >> num;
-	row.push_back(num);
-	break;
-      }
-      else{
-	std::istringstream(param) >> num;
-	row.push_back(num);
-      }
-    }
-    if((param != "w") && (param != "")){
-      outputmatrix->push_back(row.reshape(0,1));
-    }
-  }    
-  
-  infile.close();
+//   infile.open( name );
+//   cv::Mat *outputmatrix = &u;
+//   float num;
+//   
+//   while (!infile.eof()){
+//     std::string line, param;
+//     std::string file;
+//     std::stringstream tt;
+//     cv::Mat row;
+//     getline(infile,line);
+//     tt<<line;
+//     while( tt>>param ){
+//       if(param == "w"){
+// 	outputmatrix = &w;
+// 	break;
+//       }
+//       
+//       if( param[0] == '[' ){
+// 	std::istringstream(param.substr(param.find('[')+1)) >> num;
+// 	row.push_back(num);
+//       }
+//       else if( param.find(']') != std::string::npos ){
+// 	std::istringstream(param.erase(param.find(']'))) >> num;
+// 	row.push_back(num);
+// 	break;
+//       }
+//       else{
+// 	std::istringstream(param) >> num;
+// 	row.push_back(num);
+//       }
+//     }
+//     if((param != "w") && (param != "")){
+//       outputmatrix->push_back(row.reshape(0,1));
+//     }
+//   }    
+//   
+//   infile.close();
 }
   
 void Dictionary::zcawhiten( cv::Mat & samples ){
@@ -231,9 +231,6 @@ void Dictionary::getsubimages( cv::Mat& samples, std::string filename ){
     for( int y = 0; y < image.size().height - 7; ++y){
       cv::Mat1f subimage(8,8);
       subimage = image(cv::Range(y,y+8), cv::Range(x,x+8)).clone();
-      
-      //convert grayscale to floating point for processing
-      //subimage.convertTo(subimage, CV_32F);
       
       //brightness normalise
       cv::Scalar matmean;

@@ -12,7 +12,7 @@ public:
   TextRecognition(const FileReader & conf, const Dictionary & d) : parameters(conf), dict(d){
     
     readLocationData(parameters.getStringParameter("recognition_train_path") + "locations.xml", trainImageNames, trainTextBoxes);
-    readLocationData(parameters.getStringParameter("test_path") + "locations.xml", testImageNames, testTextBoxes);
+    readLocationData(parameters.getStringParameter("test_path") + "locations2.xml", testImageNames, testTextBoxes);
     
     svmparams.svm_type    = CvSVM::C_SVC;
     svmparams.kernel_type = CvSVM::LINEAR;
@@ -40,6 +40,9 @@ public:
   void zcaWhiten( cv::Mat1f & matrix);
   void computeFeatureRepresentation(cv::Mat1f & subimage, cv::Mat1f & reducedfeatures );
   void printText(std::string image);
+  
+  void generatePRData(void);
+  void generatePlotData(void);
 private:
 
   void readLocationData(std::string fileName, std::vector<std::string> & imageNames, std::vector<std::vector<cv::Rect*>*> & textBoxes);
@@ -53,6 +56,9 @@ private:
   
   void storeScores(cv::Mat1f & image, std::string imageName);
   void saveScores(void);
+  
+  cv::Mat1f precision;
+  cv::Mat1f recall;
   
   const FileReader & parameters;
   const Dictionary & dict;

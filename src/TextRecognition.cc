@@ -4,7 +4,7 @@
 #include <fstream>
 
 void TextRecognition::train(void){
-  
+  std::cout << "-----Training SVM-----" << std::endl;
   int sample_max = parameters.getIntParameter("num_samples");
   int text_samples = 0;
   int notext_samples = 0;
@@ -18,7 +18,7 @@ void TextRecognition::train(void){
     
     
     
-    int w_size = 128;  
+    int w_size = 64;  
     
     for(int j = 0; j < trainImage.size().height - w_size; j+=(w_size/4)){
       for(int i = 0; i < trainImage.size().width - w_size; i+=(w_size/4)){
@@ -129,11 +129,14 @@ void TextRecognition::test(std::string testFile){
     
   }
   storeScores(textImage, testFile);
-//   normalise(textImage);
-//   
+
+//   std::cout << testFile << std::endl;
+//   normalise(textImage); 
+//   cv::imwrite("sample_image.jpg", textImage*255);
 //   cv::namedWindow( "Display window", cv::WINDOW_NORMAL );// Create a window for display.
 //   cv::imshow( "Display window", textImage);
 //   cv::waitKey(0);
+//   cv::destroyWindow("Display window");
 }
 
 void TextRecognition::readLocationData(std::string fileName, std::vector<std::string> & imageNames, std::vector<std::vector<cv::Rect*>*> & textBoxes){
@@ -450,13 +453,14 @@ void TextRecognition::readTrainData(void){
 }
 
 void TextRecognition::storeScores(cv::Mat1f & image, std::string imageName){
+  //std::cout << image << std::endl;
   for(int j = 0; j < image.size().height; ++j){
     for(int i = 0; i < image.size().width; ++i){
       if(isText(imageName, i, j, 1, testImageNames, testTextBoxes)){
-	textScores.push_back(image.at<uchar>(j,i));
+	textScores.push_back(image.at<float>(j,i));
       }
       else{
-	nonTextScores.push_back(image.at<uchar>(j,i));
+	nonTextScores.push_back(image.at<float>(j,i));
       }
     }
   }
@@ -466,9 +470,19 @@ void TextRecognition::saveScores(void){
   std::ofstream outputfile;
   outputfile.open( parameters.getStringParameter("scores_file") );
   
-  outputfile << textScores << std::endl;
+  int i = 0;
+  
+  for(i = 0; i < (textScores.size().height - 1000); i = i+1000){
+    outputfile << textScores(cv::Range(i,i+1000), cv::Range::all()) << std::endl;
+  }
+  outputfile << textScores(cv::Range(i,textScores.size().height), cv::Range::all()) << std::endl;
+  
   outputfile << "nonTextScores" << std::endl;
-  outputfile << nonTextScores << std::endl;
+  
+  for(i = 0; i < (nonTextScores.size().height - 1000); i = i+1000){
+    outputfile << nonTextScores(cv::Range(i,i+1000), cv::Range::all()) << std::endl;
+  }
+  outputfile << nonTextScores(cv::Range(i,nonTextScores.size().height), cv::Range::all()) << std::endl;
   
   outputfile.close();
 }
@@ -477,7 +491,7 @@ void TextRecognition::readScores(void){
   std::ifstream infile;
   infile.open( parameters.getStringParameter("scores_file") );
   cv::Mat *outputmatrix = &textScores;
-  int num;
+  float num;
   
   std::cout << "loading scores file" << std::endl;
   
@@ -489,7 +503,10 @@ void TextRecognition::readScores(void){
     getline(infile,line);
     tt<<line;
     while( tt>>param ){
-      if(param == "non"){
+      if(param == "nonTextScores"){
+	tt>>param;
+	tt>>param;
+	std::cout << param << std::endl;
 	std::cout << "loading non text scores" << std::endl;
 	outputmatrix = &nonTextScores;
 	break;
@@ -509,9 +526,8 @@ void TextRecognition::readScores(void){
 	row.push_back(num);
       }
     }
-    if((param != "non") && (param != "")){
-      std::cout << "saving line" << std::endl;
-      outputmatrix->push_back(row.reshape(0,1));
+    if((param != "nonTextScores") && (param != "")){
+      outputmatrix->push_back(row);
     }
   }    
   
@@ -522,9 +538,66 @@ void TextRecognition::readScores(void){
 
 void TextRecognition:: testAll(void){
   
-  for( uint i = 0; i < testImageNames.size(); ++i){
+  for( uint i = 0; i < testImageNames.size() ; ++i){
     std::cout << "-----Testing image " << i << " of " << testImageNames.size() << "-----" << std::endl;
     test(testImageNames[i]);
   }
-  saveScores();
+  generatePRData();
+  //saveScores();
+  generatePlotData();
+  
+}
+
+void TextRecognition::generatePRData(void){
+  
+  std::cout << "sorting scores" << std::endl;
+  
+  cv::Mat sortedTextScores;
+  cv::Mat sortedNonTextScores;
+  cv::Mat temp;
+  
+  cv::sort(textScores, sortedTextScores, CV_SORT_EVERY_COLUMN + CV_SORT_DESCENDING);
+  cv::sort(nonTextScores, sortedNonTextScores, CV_SORT_EVERY_COLUMN + CV_SORT_DESCENDING);
+  cv::vconcat(sortedTextScores, sortedNonTextScores, temp);
+  
+  double min1, max1;
+  cv::minMaxLoc(temp, &min1, &max1);
+  
+  cv::subtract(sortedTextScores, min1, sortedTextScores);
+  sortedTextScores = sortedTextScores*(1000.0/(max1 - min1));
+  
+  cv::subtract(sortedNonTextScores, min1, sortedNonTextScores);
+  sortedNonTextScores = sortedNonTextScores*(1000.0/(max1 - min1));
+  
+  int tempText = 0;
+  int tempNonText = 0;
+  
+  for(int i = 1000; i > 0; --i){
+   
+
+    while(sortedTextScores.at<float>(tempText,0) >= i){
+      ++tempText;
+      //std::cout << tempText << std::endl;
+    }
+   while(sortedNonTextScores.at<float>(tempNonText,0) >= i){
+      ++tempNonText;
+    }
+    //std::cout << tempText << std::endl;
+    float p = float(tempText)/float(tempText + tempNonText);
+    float r = float(tempText)/(float(sortedTextScores.size().height));
+    
+    precision.push_back(p);
+    recall.push_back(r);
+  }
+}
+
+void TextRecognition::generatePlotData(void){
+  
+  std::ofstream outputfile;
+  outputfile.open( parameters.getStringParameter("graph_file") );
+  
+  for(int i = 0; i < precision.size().height; ++i){
+    outputfile << recall.at<float>(i,0) << " " << precision.at<float>(i,0) << std::endl;
+  }
+  outputfile.close();
 }
