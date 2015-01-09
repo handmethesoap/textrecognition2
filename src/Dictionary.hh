@@ -26,6 +26,7 @@ public:
   void generate();
   void read();
   void zcawhiten( cv::Mat & samples );
+  void normalise( cv::Mat1f & matrix );
   cv::Mat1f centers;
   cv::Mat w, u;
   

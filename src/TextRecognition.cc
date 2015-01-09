@@ -125,6 +125,8 @@ void TextRecognition::test(std::string testFile){
       if( ((testImage.size().height - 2*w_size) < j) && (j < (testImage.size().height - w_size)) ){
 	j = testImage.size().height - (2*w_size); 
       }
+//       std::cout << "Exiting" << std::endl;
+//       exit(0);
     }
     
   }
@@ -299,9 +301,12 @@ void TextRecognition::computeFeatureRepresentation(cv::Mat1f & subimage, cv::Mat
   //std::cout << features.row(1) << std::endl;
   //std::cout << "features size = " << features2.size() << std::endl;
   cv::Mat1f features3;
+  //std::cout << std::endl << std::endl << "starting" << std::endl;
   for( int m = 0; m < parameters.getIntParameter("dictionary_length"); ++m){
-    cv::Mat1f temp = features2*(dict.centers.row(m).reshape(0,64));
+    cv::Mat1f temp1 = (dict.centers.row(m).reshape(0,64));
+    cv::Mat1f temp = features2*temp1;
     features3.push_back(temp);
+    //std::cout << temp << std::endl;
   }
   //reshape so each row is the result the dot product of each 8*8 subsubimage with a single dictionary element 
   cv::Mat1f features4 = features3.reshape(0,parameters.getIntParameter("dictionary_length"));
@@ -325,7 +330,7 @@ void TextRecognition::reduceFeatures( cv::Mat1f & featurerepresentation, cv::Mat
     for(int k = 0; k < 3; ++k){
       for(int l = 0; l < 3; ++l){
 	
-	reducedfeatures.push_back( (cv::sum(dictmatrix2(cv::Range(k*8, k*8+9), cv::Range(l*8,l*8+9)))[0]) );
+	reducedfeatures.push_back( (cv::sum(dictmatrix2(cv::Range(k*8, k*8+9), cv::Range(l*8,l*8+9)))[0])/9 );
 	
       }
     }
@@ -548,6 +553,27 @@ void TextRecognition:: testAll(void){
   
 }
 
+void TextRecognition:: testOne(uint i){
+  
+    std::cout << "-----Testing image " << i << " of " << testImageNames.size() << "-----" << std::endl;
+    test(testImageNames[i]);
+    generatePRData();
+    //saveScores();
+    generatePlotData();
+  
+}
+
+void TextRecognition:: testN(uint n){
+  
+  for( uint i = 0; i < n ; ++i){
+    std::cout << "-----Testing image " << i << " of " << testImageNames.size() << "-----" << std::endl;
+    test(testImageNames[i]);
+  }
+  generatePRData();
+  //saveScores();
+  generatePlotData();
+  
+}
 void TextRecognition::generatePRData(void){
   
   std::cout << "sorting scores" << std::endl;

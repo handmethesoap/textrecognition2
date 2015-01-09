@@ -39,7 +39,7 @@ int main( int argc, char** argv )
   
   
   //Read Parameters from file
-  std::string parameterfile = "parameters.par";
+  std::string parameterfile = "debug.par";
   CHECK_MSG( parameters.readFile(parameterfile), "Could not read config file");
   
   //Initialise objects
@@ -60,10 +60,59 @@ int main( int argc, char** argv )
   else{
     recogniseText.loadTrainData();
   }
-  recogniseText.testAll();
-  //recogniseText.readScores();
-//   recogniseText.testAll();
+  recogniseText.testN(1);
   
-//   recogniseText.readScores();
-  return 0;
+  exit(0);
+  
+//   parameters.setParameter("data_file", "train_data1.txt");
+//   parameters.setParameter("scores_file", "tempscores1.txt");
+//   parameters.setParameter("graph_file", "graphdata1.dat");
+//   parameters.setParameter("dictionary_length", 1);
+//   parameters.setParameter("dictionary_save_path", "dicttest1/");
+//   
+//   //Initialise objects
+//   Dictionary dict1(parameters);
+//   if(parameters.getIntParameter("generate_bit") == 1){
+//     dict1.generate();
+//   }
+//   else{
+//     dict1.read();
+//   }
+//   
+//   TextRecognition recogniseText1(parameters, dict1);
+//   if(parameters.getIntParameter("train_bit") == 1){
+//     recogniseText1.train();
+//   }
+//   else{
+//     recogniseText1.loadTrainData();
+//   }
+//   recogniseText1.testN(5);
+//   
+//   parameters.setParameter("data_file", "train_data10.txt");
+//   parameters.setParameter("scores_file", "tempscores10.txt");
+//   parameters.setParameter("graph_file", "graphdata10.dat");
+//   parameters.setParameter("dictionary_length", 10);
+//   parameters.setParameter("dictionary_save_path", "dicttest10/");
+//   
+//   //Initialise objects
+//   Dictionary dict10(parameters);
+//   if(parameters.getIntParameter("generate_bit") == 1){
+//     dict10.generate();
+//   }
+//   else{
+//     dict10.read();
+//   }
+//   
+//   TextRecognition recogniseText10(parameters, dict10);
+//   if(parameters.getIntParameter("train_bit") == 1){
+//     recogniseText10.train();
+//   }
+//   else{
+//     recogniseText10.loadTrainData();
+//   }
+//   recogniseText10.testN(5);
+//   
+//   system("gnuplot gp.p");
+//   
+//   return 0;
 }

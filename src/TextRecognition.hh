@@ -34,6 +34,8 @@ public:
   void loadTrainData( void );
   void test(std::string testFile);
   void testAll(void);
+  void testOne(uint i);
+  void testN(uint n);
   void readScores(void);
   
   void normalise( cv::Mat1f & matrix );

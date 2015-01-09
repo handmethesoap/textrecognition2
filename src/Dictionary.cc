@@ -232,26 +232,40 @@ void Dictionary::getsubimages( cv::Mat& samples, std::string filename ){
       cv::Mat1f subimage(8,8);
       subimage = image(cv::Range(y,y+8), cv::Range(x,x+8)).clone();
       
-      //brightness normalise
-      cv::Scalar matmean;
-      cv::Scalar stddev;
-      cv::meanStdDev(subimage, matmean, stddev);
-      cv::subtract(subimage, matmean[0], subimage);
-
-      //contrast normalise and remap to 0-1 range
-      cv::meanStdDev(subimage, matmean, stddev);
-      if( stddev[0] != 0.0 ){
-	      subimage = subimage*(0.5/(1.0*stddev[0]));
-      } 	    
-      cv::add(subimage, 0.5, subimage);
-      cv::threshold(subimage, subimage, 1, 1, cv::THRESH_TRUNC );
-      cv::threshold(subimage, subimage, 0, 0, cv::THRESH_TOZERO );
-      cv::subtract(subimage, 0.5, subimage);
+      normalise(subimage);
       
       //add processed subimage to sample matrix to be passed to kmeans algorithim
       samples.push_back((subimage.reshape(0, 1)));
     }
   }
+}
+
+void Dictionary::normalise( cv::Mat1f & matrix ){
+  
+  //brightness normalise
+  cv::Scalar matmean;
+  cv::Scalar stddev;
+  cv::meanStdDev(matrix, matmean, stddev);
+  cv::subtract(matrix, matmean[0], matrix);
+  //std::cout << "here1.1" << std::endl;
+  // FIXME
+  //contrast normalise and remap to 0-1 range
+  cv::meanStdDev(matrix, matmean, stddev);
+  if( stddev[0] != 0.0 ){
+    matrix = matrix*(0.5/(1.0*stddev[0]));
+  }
+  //std::cout << "here1.2" << std::endl;
+  cv::add(matrix, 0.5, matrix);
+  //std::cout << "here1.3" << std::endl;
+  for(int i=0; i<matrix.size().width; ++i){
+    for(int j=0; j<matrix.size().height; ++j){
+      if( matrix.at<float>(j,i) < 0.0 )
+	matrix.at<float>(j,i) = 0.0;
+      else if ( matrix.at<float>(j,i) > 1)
+	matrix.at<float>(j,i) = 1.0;      
+    }
+  }
+  //std::cout << "here1.4" << std::endl;
 }
 //   std::vector<Rectangle*> textboxes;
 //   
