@@ -31,9 +31,28 @@ void TextRecognition::train(void){
 	    cv::Mat1f usubimage = trainImage(cv::Range(j,j+w_size), cv::Range(i,i+w_size)).clone();
 	    cv::Mat1f subimage(32,32);
 	    cv::resize(usubimage, subimage, subimage.size());
-	    cv::Mat1f reducedfeatures;
+	    
+	    if(parameters.getIntParameter("debug_flag") == 1){
+	      std::cout << "Subimage" << std::endl;
+	      printm(subimage, 2);
+	    }
+	    
+	    cv::Mat1f reducedfeatures;	    
 	    computeFeatureRepresentation(subimage, reducedfeatures);
-	    traindata.push_back(reducedfeatures.reshape(0,1));
+	    cv::Mat reducedfeatures2;
+	    reducedfeatures.convertTo(reducedfeatures2, CV_32F);
+	    
+	    if(parameters.getIntParameter("debug_flag") == 1){
+	      std::cout << "reduced features" << std::endl;
+	      printm(reducedfeatures2, 4);
+	    }
+	    
+	    if(parameters.getIntParameter("debug_flag") == 1){
+	      std::cout << "Exiting" << std::endl;
+	      exit(0);
+	    }
+	  
+	    traindata.push_back(reducedfeatures2.reshape(0,1));
 	  }
 	  else if( (type == 1) && (text_samples < sample_max) ){
 	    ++text_samples;
@@ -41,9 +60,27 @@ void TextRecognition::train(void){
 	    cv::Mat1f usubimage = trainImage(cv::Range(j,j+w_size), cv::Range(i,i+w_size)).clone();
 	    cv::Mat1f subimage(32,32);
 	    cv::resize(usubimage, subimage, subimage.size());
+	    
+	    if(parameters.getIntParameter("debug_flag") == 1){
+	      std::cout << "Subimage" << std::endl;
+	      printm(subimage, 2);
+	    }
+	    
 	    cv::Mat1f reducedfeatures;
 	    computeFeatureRepresentation(subimage, reducedfeatures);
-	    traindata.push_back(reducedfeatures.reshape(0,1));
+	    cv::Mat reducedfeatures2;
+	    reducedfeatures.convertTo(reducedfeatures2, CV_32F);
+	    
+	    if(parameters.getIntParameter("debug_flag") == 1){
+	      std::cout << "reduced features" << std::endl;
+	      printm(reducedfeatures2, 4);
+	    }
+	    
+	    if(parameters.getIntParameter("debug_flag") == 1){
+	      std::cout << "Exiting" << std::endl;
+	      exit(0);
+	    }
+	    traindata.push_back(reducedfeatures2.reshape(0,1));
 	  }
       }
     }
@@ -109,10 +146,24 @@ void TextRecognition::test(std::string testFile){
 	  cv::Mat1f reducedfeatures;
 	  cv::Mat reducedfeatures2;
 	  
+	  if(parameters.getIntParameter("debug_flag") == 1){
+	    std::cout << "Subimage" << std::endl;
+	    printm(subimage, 2);
+	  }
 	  computeFeatureRepresentation(subimage, reducedfeatures);
 	  
 	  reducedfeatures.convertTo(reducedfeatures2, CV_32F);
 	  
+	  if(parameters.getIntParameter("debug_flag") == 1){
+	    std::cout << "output reduced feature matrix" << std::endl;
+	    printm(reducedfeatures2, 4);
+	  }
+	  
+	  if(parameters.getIntParameter("debug_flag") == 1){
+	    std::cout << "Exiting" << std::endl;
+	    exit(0);
+	  }
+	    
 	  float predictResult = linearSVM.predict(reducedfeatures2.reshape(0,1), true);
 	  cv::max(imageMask*predictResult, textImage(cv::Range(j,j+w_size), cv::Range(i,i+w_size)), textImage(cv::Range(j,j+w_size), cv::Range(i,i+w_size)));
 		  
@@ -120,13 +171,13 @@ void TextRecognition::test(std::string testFile){
 	  if( ((testImage.size().width - 2*w_size) < i) && (i < (testImage.size().width - w_size)) ){
 	    i = testImage.size().width - (2*w_size); 
 	  }
+
       }
       
       if( ((testImage.size().height - 2*w_size) < j) && (j < (testImage.size().height - w_size)) ){
 	j = testImage.size().height - (2*w_size); 
       }
-//       std::cout << "Exiting" << std::endl;
-//       exit(0);
+
     }
     
   }
@@ -280,41 +331,85 @@ void TextRecognition::computeFeatureRepresentation(cv::Mat1f & subimage, cv::Mat
 	//extract subsubimages
 	cv::Mat1f subsubimage = subimage(cv::Range(k,k+8), cv::Range(l,l+8)).clone();
 	
+	if(parameters.getIntParameter("debug_flag") == 1){
+	  if( (k == 0) && (l == 0) ){
+	    std::cout << "Subsubimage" << std::endl;
+	    printm(subsubimage, 4);
+	  }
+	}
+	
 	//normalise and zca whiten
 	// TODO: normalize correctly, i.e. zca whitening over all (or many random) train patches
 	// save w and u and use that w and u to transform now this particular subimage
 	normalise(subsubimage);
-	//zcaWhiten( subsubimage );
 	
 	
+	if(parameters.getIntParameter("debug_flag") == 1){
+	  if( (k == 0) && (l == 0) ){
+	    std::cout << "Normalised Subsubimage" << std::endl;
+	    printm(subsubimage, 4);
+	  }
+	}
+	
+	dict.zcawhitener( subsubimage );
+	
+	if(parameters.getIntParameter("debug_flag") == 1){
+	  if( (k == 0) && (l == 0) ){
+	    std::cout << "Whitened Subsubimage" << std::endl;
+	    printm(subsubimage, 4);
+	  }
+	}
 	//compute dot product with dictionary
 	// possible speedup: use gemm (i.e. matrix multiplication)
 	features.push_back((subsubimage.reshape(0, 64)));
+	
 	
 	// TODO: max(..., alpha)  
       }
     }
   
-  //std::cout << features.size() << std::endl;
-  //std::cout << "features size = " << features.size() << std::endl;
   cv:: Mat1f features2 = features.reshape(0,625);
-  //std::cout << features.row(1) << std::endl;
-  //std::cout << "features size = " << features2.size() << std::endl;
+  
+  if(parameters.getIntParameter("debug_flag") == 1){
+    std::cout << "Subimage in feature matrix" << std::endl;
+    printm(features2.row(0), 2);
+  }
+  
   cv::Mat1f features3;
-  //std::cout << std::endl << std::endl << "starting" << std::endl;
+  
   for( int m = 0; m < parameters.getIntParameter("dictionary_length"); ++m){
     cv::Mat1f temp1 = (dict.centers.row(m).reshape(0,64));
+    
+    if(parameters.getIntParameter("debug_flag") == 1){
+      std::cout << "Dictionary element " << m << std::endl;
+      printm(temp1.reshape(0,1), 2);
+    }
+    
     cv::Mat1f temp = features2*temp1;
     features3.push_back(temp);
-    //std::cout << temp << std::endl;
+    
+    if(parameters.getIntParameter("debug_flag") == 1){
+      std::cout << "dictionary subsubimage dot product" << std::endl;
+      printm(temp.row(0), 2);
+    }
   }
+  
+  if(parameters.getIntParameter("debug_flag") == 1){
+    std::cout << "saved dictionary subsubimage dot product" << std::endl;
+    printm(features3.row(0), 2);
+  }
+    
+
+  
   //reshape so each row is the result the dot product of each 8*8 subsubimage with a single dictionary element 
   cv::Mat1f features4 = features3.reshape(0,parameters.getIntParameter("dictionary_length"));
-//   std::cout << "features4 size = " << features4.size() << std::endl;
-//   //std::cout << features4 << std::endl;
-//   std::cout << (dict.centers.row(0)).reshape(0,8) << std::endl;
-//   std::cout << "centers size = " << dict.centers.size() << std::endl;
-  // TODO: test shape of reducedfeatures //DONE
+  
+  if(parameters.getIntParameter("debug_flag") == 1){
+    std::cout << "rearranged feature matrix (is this correct?) " << features4.size() << std::endl;
+    printm(features4.row(0), 2);
+  }
+
+  
   reduceFeatures(features4, reducedfeatures);
 }
 
@@ -323,19 +418,31 @@ void TextRecognition::reduceFeatures( cv::Mat1f & featurerepresentation, cv::Mat
   for( int i = 0; i < parameters.getIntParameter("dictionary_length"); ++i){
     
     cv::Mat1f dictmatrix = featurerepresentation.row(i);
-    //std::cout << "dictmatrix = " << dictmatrix.size() << std::endl;
     cv::Mat1f dictmatrix2 = dictmatrix.reshape(0,25);
-    //std::cout << dictmatrix2 << std::endl;
+    
+    if(parameters.getIntParameter("debug_flag") == 1){
+      if(i == 0){
+	std::cout << "rearranged dictionary element 0 dot product matrix" << std::endl;
+	printm(dictmatrix2,2);
+      }
+    }
     
     for(int k = 0; k < 3; ++k){
       for(int l = 0; l < 3; ++l){
 	
-	reducedfeatures.push_back( (cv::sum(dictmatrix2(cv::Range(k*8, k*8+9), cv::Range(l*8,l*8+9)))[0])/9 );
+	reducedfeatures.push_back( (cv::sum(dictmatrix2(cv::Range(k*8, k*8+9), cv::Range(l*8,l*8+9)))[0]) );
 	
+	if(parameters.getIntParameter("debug_flag") == 1){
+	  if( i == 0 ){
+	    std::cout << std::setprecision(6) << "matrix for reduction, average = " << (cv::sum(dictmatrix2(cv::Range(k*8, k*8+9), cv::Range(l*8,l*8+9)))[0]) <<  std::endl;
+	    //printm(dictmatrix2(cv::Range(k*8, k*8+9), cv::Range(l*8,l*8+9)),2);
+	  }
+	}
+    
       }
     }
   }
-  //std::cout << reducedfeatures << std::endl << std::endl;
+  
 }
 
 void TextRecognition::normalise( cv::Mat1f & matrix ){
@@ -574,6 +681,7 @@ void TextRecognition:: testN(uint n){
   generatePlotData();
   
 }
+
 void TextRecognition::generatePRData(void){
   
   std::cout << "sorting scores" << std::endl;
@@ -618,7 +726,7 @@ void TextRecognition::generatePRData(void){
 }
 
 void TextRecognition::generatePlotData(void){
-  
+ 
   std::ofstream outputfile;
   outputfile.open( parameters.getStringParameter("graph_file") );
   
@@ -626,4 +734,21 @@ void TextRecognition::generatePlotData(void){
     outputfile << recall.at<float>(i,0) << " " << precision.at<float>(i,0) << std::endl;
   }
   outputfile.close();
+}
+
+void TextRecognition::printm(cv::Mat mat, int prec){      
+  std::cout << "[";
+    for(int i=0; i<mat.size().height; i++)
+    {
+        
+        for(int j=0; j<mat.size().width; j++)
+        {
+            std::cout << std::setprecision(prec) << mat.at<float>(i,j);
+            if(j != mat.size().width-1)
+                std::cout << ", ";
+            else
+                std::cout << ";" << std::endl; 
+        }
+    }
+    std::cout << "]" << std::endl; 
 }

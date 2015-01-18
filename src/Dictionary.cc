@@ -107,43 +107,48 @@ void Dictionary::read(){
   ss << parameters.getStringParameter("dictionary_save_path") << "zcadata.txt";
   ss >> name;
   
-//   infile.open( name );
-//   cv::Mat *outputmatrix = &u;
-//   float num;
-//   
-//   while (!infile.eof()){
-//     std::string line, param;
-//     std::string file;
-//     std::stringstream tt;
-//     cv::Mat row;
-//     getline(infile,line);
-//     tt<<line;
-//     while( tt>>param ){
-//       if(param == "w"){
-// 	outputmatrix = &w;
-// 	break;
-//       }
-//       
-//       if( param[0] == '[' ){
-// 	std::istringstream(param.substr(param.find('[')+1)) >> num;
-// 	row.push_back(num);
-//       }
-//       else if( param.find(']') != std::string::npos ){
-// 	std::istringstream(param.erase(param.find(']'))) >> num;
-// 	row.push_back(num);
-// 	break;
-//       }
-//       else{
-// 	std::istringstream(param) >> num;
-// 	row.push_back(num);
-//       }
-//     }
-//     if((param != "w") && (param != "")){
-//       outputmatrix->push_back(row.reshape(0,1));
-//     }
-//   }    
-//   
-//   infile.close();
+  infile.open( name );
+  cv::Mat *outputmatrix = &u;
+  float num;
+  
+  while (!infile.eof()){
+    std::string line, param;
+    std::string file;
+    std::stringstream tt;
+    cv::Mat row;
+    getline(infile,line);
+    tt<<line;
+    while( tt>>param ){
+      if(param == "w"){
+	outputmatrix = &w;
+	break;
+      }
+      
+      if( param[0] == '[' ){
+	std::istringstream(param.substr(param.find('[')+1)) >> num;
+	row.push_back(num);
+      }
+      else if( param.find(']') != std::string::npos ){
+	std::istringstream(param.erase(param.find(']'))) >> num;
+	row.push_back(num);
+	break;
+      }
+      else{
+	std::istringstream(param) >> num;
+	row.push_back(num);
+      }
+    }
+    if((param != "w") && (param != "")){
+      outputmatrix->push_back(row.reshape(0,1));
+    }
+  }    
+  
+  infile.close();
+  cv::Mat D(w.rows,w.rows,CV_32F);
+  D = D.diag(w);
+  cv::Mat utranspose;
+  cv::transpose(u, utranspose);
+  zca = u*D*utranspose;
 }
   
 void Dictionary::zcawhiten( cv::Mat & samples ){
@@ -162,8 +167,8 @@ void Dictionary::zcawhiten( cv::Mat & samples ){
   w = 1./w;
   cv::Mat D(w.rows,w.rows,CV_32F); 
   D = D.diag(w);
-  samplestranspose = u*D*utranspose*samplestranspose;
-  cv::transpose(samplestranspose, samples);
+  zca = u*D*utranspose;
+  samples = samples*zca;
   
   double min;
   double max;
@@ -176,6 +181,23 @@ void Dictionary::zcawhiten( cv::Mat & samples ){
   
   samples = samples*(255.0/(max-min));
   
+}
+
+void Dictionary::zcawhitener( cv::Mat & samplesin ) const{
+ 
+  //apply ZCA whitening
+  cv::Mat samplestranspose, utranspose, samples;
+  samples = samplesin;
+  samples = samples.reshape(0,1);
+  samples = samples*zca;
+  
+  double min;
+  double max;
+  cv::Point minLoc;
+  cv::Point maxLoc;
+  cv::minMaxLoc(samples, &min, &max, &minLoc, &maxLoc);
+  cv::add(samples, -min, samples);
+  samples = samples*(1.0/(max-min));
 }
 
 void Dictionary::getfilenames( std::vector<std::string>& filenames ){

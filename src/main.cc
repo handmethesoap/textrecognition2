@@ -23,6 +23,8 @@ int main( int argc, char** argv )
   parameters.registerIntParameter("subimage_size");
   parameters.registerRealParameter("kmeans_eps");
   
+  parameters.registerIntParameter("debug_flag");
+  
   parameters.registerIntParameter("min_window_size");  
   parameters.registerIntParameter("max_window_size");  
   parameters.registerIntParameter("window_increment");  

@@ -51,7 +51,7 @@ private:
   bool isText(std::string imageName, int x, int y, int boxSize, std::vector<std::string> & imageNames, std::vector<std::vector<cv::Rect*>*> & textBoxes);
 
   void reduceFeatures( cv::Mat1f & featurerepresentation, cv::Mat1f & reducedfeatures );
-  
+  void printm(cv::Mat mat, int prec);
   
   void saveTrainData(void);
   void readTrainData(void);

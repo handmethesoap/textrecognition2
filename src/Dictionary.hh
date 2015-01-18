@@ -25,10 +25,10 @@ public:
   
   void generate();
   void read();
-  void zcawhiten( cv::Mat & samples );
+  void zcawhitener( cv::Mat & samplesin ) const;
   void normalise( cv::Mat1f & matrix );
   cv::Mat1f centers;
-  cv::Mat w, u;
+  cv::Mat w, u, zca;
   
 private:
   
@@ -36,6 +36,7 @@ private:
   void getfilenames( std::vector<std::string>& filenames );
   void getsubimages( cv::Mat& samples, std::string filename );
   const FileReader & parameters;
+  void zcawhiten( cv::Mat & samples );
   
   
   
