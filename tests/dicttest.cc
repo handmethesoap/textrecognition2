@@ -44,30 +44,33 @@ int main( int argc, char** argv )
   std::string parameterfile = "dicttestpar.par";
   CHECK_MSG( parameters.readFile(parameterfile), "Could not read config file");
   
-  //Initialise objects
-  Dictionary dict(parameters);
-  if(parameters.getIntParameter("generate_bit") == 1){
-    dict.generate();
-  }
-  else{
-    dict.read();
-  }
-  
-  
-//   Train text recogniser
-  TextRecognition recogniseText(parameters, dict);
-  if(parameters.getIntParameter("train_bit") == 1){
-    recogniseText.train();
-  }
-  else{
-    recogniseText.loadTrainData();
-  }
-  recogniseText.testN(5);
-  
+//   //Initialise objects
+//   Dictionary dict(parameters);
+//   if(parameters.getIntParameter("generate_bit") == 1){
+//     dict.generate();
+//   }
+//   else{
+//     dict.read();
+//   }
+//   
+//   
+// //   Train text recogniser
+//   TextRecognition recogniseText(parameters, dict);
+//   if(parameters.getIntParameter("train_bit") == 1){
+//     recogniseText.train();
+//   }
+//   else{
+//     recogniseText.loadTrainData();
+//   }
+//   recogniseText.testN(100);
+//   
+//   recogniseText.~TextRecognition();
+//   dict.~Dictionary();
+//   
   parameters.setParameter("data_file", "train_data1.txt");
   parameters.setParameter("scores_file", "tempscores1.txt");
   parameters.setParameter("graph_file", "graphdata1.dat");
-  parameters.setParameter("dictionary_length", 1);
+  parameters.setParameter("dictionary_length", 64);
   parameters.setParameter("dictionary_save_path", "dicttest1/");
   
   //Initialise objects
@@ -86,31 +89,34 @@ int main( int argc, char** argv )
   else{
     recogniseText1.loadTrainData();
   }
-  recogniseText1.testN(5);
+  recogniseText1.testN(1);
   
-  parameters.setParameter("data_file", "train_data10.txt");
-  parameters.setParameter("scores_file", "tempscores10.txt");
-  parameters.setParameter("graph_file", "graphdata10.dat");
-  parameters.setParameter("dictionary_length", 10);
-  parameters.setParameter("dictionary_save_path", "dicttest10/");
+  recogniseText1.~TextRecognition();
+  dict1.~Dictionary();
   
-  //Initialise objects
-  Dictionary dict10(parameters);
-  if(parameters.getIntParameter("generate_bit") == 1){
-    dict10.generate();
-  }
-  else{
-    dict10.read();
-  }
-  
-  TextRecognition recogniseText10(parameters, dict10);
-  if(parameters.getIntParameter("train_bit") == 1){
-    recogniseText10.train();
-  }
-  else{
-    recogniseText10.loadTrainData();
-  }
-  recogniseText10.testN(5);
+//   parameters.setParameter("data_file", "train_data10.txt");
+//   parameters.setParameter("scores_file", "tempscores10.txt");
+//   parameters.setParameter("graph_file", "graphdata10.dat");
+//   parameters.setParameter("dictionary_length", 200);
+//   parameters.setParameter("dictionary_save_path", "dicttest10/");
+//   
+//   //Initialise objects
+//   Dictionary dict10(parameters);
+//   if(parameters.getIntParameter("generate_bit") == 1){
+//     dict10.generate();
+//   }
+//   else{
+//     dict10.read();
+//   }
+//   
+//   TextRecognition recogniseText10(parameters, dict10);
+//   if(parameters.getIntParameter("train_bit") == 1){
+//     recogniseText10.train();
+//   }
+//   else{
+//     recogniseText10.loadTrainData();
+//   }
+//   recogniseText10.testN(1);
   
   system("gnuplot gp.p");
   

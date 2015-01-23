@@ -10,11 +10,12 @@ void TextRecognition::train(void){
   int notext_samples = 0;
   uint image_n = 0;
   
-  while( (image_n < trainImageNames.size()) && ((notext_samples < sample_max) || (text_samples < sample_max)) )
+  while( (image_n < trainImageNames.size())
+         && ((notext_samples < sample_max) || (text_samples < sample_max)) )
   {
     
     cv::Mat1f trainImage = cv::imread(  parameters.getStringParameter("recognition_train_path") + trainImageNames[image_n] , cv::IMREAD_GRAYSCALE );
-    trainImage = trainImage/255;
+    trainImage = trainImage/255.f;
     
     
     
@@ -108,7 +109,7 @@ void TextRecognition::test(std::string testFile){
   
   cv::Mat1f testImage = cv::imread(  parameters.getStringParameter("test_path") + testFile , cv::IMREAD_GRAYSCALE );
   std::cout << testImage.size().width << ", " << testImage.size().height << std::endl;
-  testImage = testImage/255;
+  testImage = testImage/255.0;
   //normalise(testImage);
   
   int min_win = parameters.getIntParameter("min_window_size");  
@@ -120,95 +121,94 @@ void TextRecognition::test(std::string testFile){
   
 
   for(int w_size = min_win; w_size <= max_win; w_size += win_inc){
-    
-    std::cout << "testing with subimage size of " << w_size << std::endl;
-    
-    cv::Mat1f imageMask = cv::Mat1f::ones(w_size, w_size);
-  
-    for(int j = 0; j <= testImage.size().height - w_size; j+=w_size){
-      
-      if(testImage.size().height < w_size){
-	break;
-      }
-      
-      for(int i = 0; i <= testImage.size().width - w_size; i+=w_size){
-	  
-	  if(testImage.size().width < w_size){
-	    break;
-	  }
-	  
-	  //std::cout << testImage.size().width << ", " << testImage.size().height << ", " << i << ", " << j << std::endl;
-	  cv::Mat1f usubimage = testImage(cv::Range(j,j+w_size), cv::Range(i,i+w_size)).clone();
-	  //std::cout << "here1.1" << std::endl;
-	  cv::Mat1f subimage(32,32);
-	  cv::resize(usubimage, subimage, subimage.size());
-	  
-	  cv::Mat1f reducedfeatures;
-	  cv::Mat reducedfeatures2;
-	  
-	  if(parameters.getIntParameter("debug_flag") == 1){
-	    std::cout << "Subimage" << std::endl;
-	    printm(subimage, 2);
-	  }
-	  computeFeatureRepresentation(subimage, reducedfeatures);
-	  
-	  reducedfeatures.convertTo(reducedfeatures2, CV_32F);
-	  
-	  if(parameters.getIntParameter("debug_flag") == 1){
-	    std::cout << "output reduced feature matrix" << std::endl;
-	    printm(reducedfeatures2, 4);
-	  }
-	  
-	  if(parameters.getIntParameter("debug_flag") == 1){
-	    std::cout << "Exiting" << std::endl;
-	    exit(0);
-	  }
-	    
-	  float predictResult = linearSVM.predict(reducedfeatures2.reshape(0,1), true);
-	  cv::max(imageMask*predictResult, textImage(cv::Range(j,j+w_size), cv::Range(i,i+w_size)), textImage(cv::Range(j,j+w_size), cv::Range(i,i+w_size)));
-		  
-	  //adjust iterators in order to process edges of image
-	  if( ((testImage.size().width - 2*w_size) < i) && (i < (testImage.size().width - w_size)) ){
-	    i = testImage.size().width - (2*w_size); 
-	  }
+
+      std::cout << "testing with subimage size of " << w_size << std::endl;
+
+      cv::Mat1f imageMask = cv::Mat1f::ones(w_size, w_size);
+
+      for(int j = 0; j <= testImage.size().height - w_size; j+=w_size){
+
+          if(testImage.size().height < w_size){
+              break;
+          }
+
+          for(int i = 0; i <= testImage.size().width - w_size; i+=w_size){
+
+              if(testImage.size().width < w_size){
+                  break;
+              }
+
+              //std::cout << testImage.size().width << ", " << testImage.size().height << ", " << i << ", " << j << std::endl;
+              cv::Mat1f usubimage = testImage(cv::Range(j,j+w_size), cv::Range(i,i+w_size)).clone();
+              cv::Mat1f subimage(32,32);
+              cv::resize(usubimage, subimage, subimage.size());
+
+              cv::Mat1f reducedfeatures;
+              cv::Mat reducedfeatures2;
+
+              if(parameters.getIntParameter("debug_flag") == 1){
+                  std::cout << "Subimage" << std::endl;
+                  printm(subimage, 2);
+              }
+              computeFeatureRepresentation(subimage, reducedfeatures);
+              reducedfeatures.convertTo(reducedfeatures2, CV_32F);
+
+              if(parameters.getIntParameter("debug_flag") == 1){
+                  std::cout << "output reduced feature matrix" << std::endl;
+                  printm(reducedfeatures2, 4);
+              }
+
+              if(parameters.getIntParameter("debug_flag") == 1){
+                  std::cout << "Exiting" << std::endl;
+                  exit(0);
+              }
+
+              float predictResult = linearSVM.predict(reducedfeatures2.reshape(0,1), true);
+              cv::max(imageMask*predictResult, textImage(cv::Range(j,j+w_size), cv::Range(i,i+w_size)), textImage(cv::Range(j,j+w_size), cv::Range(i,i+w_size)));
+
+              //adjust iterators in order to process edges of image
+              if( ((testImage.size().width - 2*w_size) < i) && (i < (testImage.size().width - w_size)) ){
+                  i = testImage.size().width - (2*w_size);
+              }
+
+          }
+
+          if( ((testImage.size().height - 2*w_size) < j) && (j < (testImage.size().height - w_size)) ){
+              j = testImage.size().height - (2*w_size);
+          }
 
       }
-      
-      if( ((testImage.size().height - 2*w_size) < j) && (j < (testImage.size().height - w_size)) ){
-	j = testImage.size().height - (2*w_size); 
-      }
 
-    }
-    
   }
   storeScores(textImage, testFile);
 
-//   std::cout << testFile << std::endl;
-//   normalise(textImage); 
-//   cv::imwrite("sample_image.jpg", textImage*255);
-//   cv::namedWindow( "Display window", cv::WINDOW_NORMAL );// Create a window for display.
-//   cv::imshow( "Display window", textImage);
-//   cv::waitKey(0);
-//   cv::destroyWindow("Display window");
+//     std::cout << testFile << std::endl;
+//     normalise(textImage);
+//     cv::imwrite("sample_image.jpg", textImage*255);
+//     cv::namedWindow( "Display window", cv::WINDOW_NORMAL );// Create a window for display.
+//     cv::imshow( "Display window", textImage);
+//     cv::waitKey(0);
+//     cv::destroyWindow("Display window");
 }
 
-void TextRecognition::readLocationData(std::string fileName, std::vector<std::string> & imageNames, std::vector<std::vector<cv::Rect*>*> & textBoxes){
-  
-  //open text file containing image file data
-  std::ifstream infile(fileName.c_str());
-  CHECK_MSG(infile.good(),"Error reading '" << fileName << "'.  Please check file exists and is named correctly");
-  int numimages = 0;
+void TextRecognition::readLocationData(std::string fileName, std::vector<std::string> & imageNames,
+                                       std::vector<std::vector<cv::Rect*>*> & textBoxes){
 
-  //Read image file names
-  while (!infile.eof()){
-    std::string line, param;
-    std::string file;
-    std::stringstream tt;
-    
-    getline(infile,line);
-    tt<<line;
-    
-    while( tt>>param ){
+    //open text file containing image file data
+    std::ifstream infile(fileName.c_str());
+    CHECK_MSG(infile.good(),"Error reading '" << fileName << "'.  Please check file exists and is named correctly");
+    int numimages = 0;
+
+    //Read image file names
+    while (!infile.eof()){
+        std::string line, param;
+        std::string file;
+        std::stringstream tt;
+
+        getline(infile,line);
+        tt<<line;
+
+        while( tt>>param ){
 
       //get image file name
       if(param == "<image>" ){
@@ -319,56 +319,50 @@ void TextRecognition::printText(std::string imageName){
 
 void TextRecognition::computeFeatureRepresentation(cv::Mat1f & subimage, cv::Mat1f & reducedfeatures ){
   
-  // TODO: make this float, then dot product will not overflow //DONE
-  // maybe cv::Mat1f
   cv::Mat1f features;
   
   //extract 8*8 subsubimages
 
-    for(int k = 0; k < subimage.size().height - 7; ++k){
+  for(int k = 0; k < subimage.size().height - 7; ++k){
       for( int l = 0; l < subimage.size().width - 7; ++l){
-	
-	//extract subsubimages
-	cv::Mat1f subsubimage = subimage(cv::Range(k,k+8), cv::Range(l,l+8)).clone();
-	
-	if(parameters.getIntParameter("debug_flag") == 1){
-	  if( (k == 0) && (l == 0) ){
-	    std::cout << "Subsubimage" << std::endl;
-	    printm(subsubimage, 4);
-	  }
-	}
-	
-	//normalise and zca whiten
-	// TODO: normalize correctly, i.e. zca whitening over all (or many random) train patches
-	// save w and u and use that w and u to transform now this particular subimage
-	normalise(subsubimage);
-	
-	
-	if(parameters.getIntParameter("debug_flag") == 1){
-	  if( (k == 0) && (l == 0) ){
-	    std::cout << "Normalised Subsubimage" << std::endl;
-	    printm(subsubimage, 4);
-	  }
-	}
-	
-	dict.zcawhitener( subsubimage );
-	
-	if(parameters.getIntParameter("debug_flag") == 1){
-	  if( (k == 0) && (l == 0) ){
-	    std::cout << "Whitened Subsubimage" << std::endl;
-	    printm(subsubimage, 4);
-	  }
-	}
-	//compute dot product with dictionary
-	// possible speedup: use gemm (i.e. matrix multiplication)
-	features.push_back((subsubimage.reshape(0, 64)));
-	
-	
-	// TODO: max(..., alpha)  
+
+          //extract subsubimages
+          cv::Mat1f subsubimage = subimage(cv::Range(k,k+8), cv::Range(l,l+8)).clone();
+
+          if(parameters.getIntParameter("debug_flag") == 1){
+              if( (k == 0) && (l == 0) ){
+                  std::cout << "Subsubimage" << std::endl;
+                  printm(subsubimage, 4);
+              }
+          }
+
+          //	normalise(subsubimage);
+
+
+          if(parameters.getIntParameter("debug_flag") == 1){
+              if( (k == 0) && (l == 0) ){
+                  std::cout << "Normalised Subsubimage" << std::endl;
+                  printm(subsubimage, 4);
+              }
+          }
+          dict.zcawhitener( subsubimage );
+
+          if(parameters.getIntParameter("debug_flag") == 1){
+              if( (k == 0) && (l == 0) ){
+                  std::cout << "Whitened Subsubimage" << std::endl;
+                  printm(subsubimage, 4);
+              }
+          }
+          //compute dot product with dictionary
+          // possible speedup: use gemm (i.e. matrix multiplication)
+          features.push_back((subsubimage.reshape(0, 64)));
+
+
       }
-    }
-  
-  cv:: Mat1f features2 = features.reshape(0,625);
+  }
+//  features.rows == 1 && features.cols == 64 * 25 * 25;
+
+  cv:: Mat1f features2 = features.reshape(0,625); // NOTE: this is 625 rows
   
   if(parameters.getIntParameter("debug_flag") == 1){
     std::cout << "Subimage in feature matrix" << std::endl;
@@ -490,23 +484,44 @@ void TextRecognition::zcaWhiten( cv::Mat1f & matrix){
 }	
 
 void TextRecognition::saveTrainData(void){
-  std::ofstream outputfile;
-  outputfile.open( parameters.getStringParameter("data_file") );
+//   std::ofstream outputfile;
+//   outputfile.open( parameters.getStringParameter("data_file") );
+//   
+//   outputfile << traindata << std::endl;
+//   outputfile << "data type" << std::endl;
+//   outputfile << datatype << std::endl;
+//   
+//   outputfile.close();
   
-  outputfile << traindata << std::endl;
-  outputfile << "data type" << std::endl;
-  outputfile << datatype << std::endl;
-  
-  outputfile.close();
+  cv::FileStorage fs(parameters.getStringParameter("data_file"), cv::FileStorage::WRITE);
+  if(fs.isOpened() != 1){
+    std::cout << "Cannot open " << parameters.getStringParameter("data_file") << " exiting.." << std::endl;
+    exit(0);
+  }
+  fs << "traindata" << traindata;
+  fs << "datatype" << datatype;
+  fs.release();
 }
 
 void TextRecognition::loadTrainData( void ){
-
   std::cout << "loading training data" << std::endl;
   
-  readTrainData();
-  traindata.convertTo(traindata, CV_32F);
-  datatype.convertTo(datatype, CV_32F);
+  cv::FileStorage fs(parameters.getStringParameter("data_file"), cv::FileStorage::READ);
+  if(fs.isOpened() != 1){
+    std::cout << "Cannot open " << parameters.getStringParameter("data_file") << " exiting.." << std::endl;
+    exit(0);
+  }
+    
+  fs["traindata"] >> traindata;
+  fs ["datatype"] >> datatype;
+  fs.release();
+  
+  
+  
+  
+//   readTrainData();
+//   traindata.convertTo(traindata, CV_32F);
+//   datatype.convertTo(datatype, CV_32F);
   
   std::cout << "loading complete" << std::endl;
   
@@ -672,8 +687,14 @@ void TextRecognition:: testOne(uint i){
 
 void TextRecognition:: testN(uint n){
   
+  if(n > testImageNames.size()){
+    std::cout << "Requested number of tests, " << n << ", exceeds number of test images, " << testImageNames.size() 
+    << ". Only " << testImageNames.size() << " tests will be performed" << std::endl;
+    n = uint(testImageNames.size());
+  }
+  
   for( uint i = 0; i < n ; ++i){
-    std::cout << "-----Testing image " << i << " of " << testImageNames.size() << "-----" << std::endl;
+    std::cout << "-----Testing image " << i << " of " << testImageNames.size() << ", with dictionary size " << parameters.getIntParameter("dictionary_length") << "-----" << std::endl;
     test(testImageNames[i]);
   }
   generatePRData();

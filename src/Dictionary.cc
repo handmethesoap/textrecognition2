@@ -9,20 +9,17 @@ void Dictionary::generate(){
   
   std::cout << "-----Generating Dictionary-----" << std::endl;
   
-  cv::Mat samples;
-  cv::Mat labels;
-  cv::TermCriteria criteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, parameters.getIntParameter("kmeans_iter"), parameters.getRealParameter("kmeans_eps"));
-  std::vector<std::string> filenames;
-  
   //open text file containing image file data
   std::string name = parameters.getStringParameter("dictionary_path") + "char.xml";
   std::ifstream infile(name.c_str());
   CHECK_MSG(infile.good(),"Error reading '" << name << "'.  Please check file exists and is named correctly");
   
   //Read image file names
+  std::vector<std::string> filenames;
   getfilenames( filenames );
 
   //get subimages from each image to be analysed
+  cv::Mat samples;
   for( std::vector<std::string>::iterator it = filenames.begin(); it != filenames.end(); ++it ){   
     getsubimages( samples, *it );
   }
@@ -30,7 +27,14 @@ void Dictionary::generate(){
   zcawhiten(samples);
      
   std::cout << "Performing kmeans calculation" << std::endl;
-  cv::kmeans(samples, parameters.getIntParameter("dictionary_length"), labels, criteria, parameters.getIntParameter("kmeans_attempts"), cv::KMEANS_PP_CENTERS, centers);
+  cv::Mat labels;
+  cv::TermCriteria criteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS,
+                            parameters.getIntParameter("kmeans_iter"),
+                            parameters.getRealParameter("kmeans_eps"));
+
+  cv::kmeans(samples, parameters.getIntParameter("dictionary_length"),
+             labels, criteria, parameters.getIntParameter("kmeans_attempts"), cv::KMEANS_PP_CENTERS,
+             centers);
 
   //save dictionary images to file
   printfiles();
@@ -39,130 +43,45 @@ void Dictionary::generate(){
 
 void Dictionary::printfiles(){
   
-  //calculate parameters to scale images to the 0-255 range
-  double min;
-  double max;
-  cv::Point minLoc;
-  cv::Point maxLoc;
-  cv::minMaxLoc(centers, &min, &max, &minLoc, &maxLoc);
-  cv::subtract(centers, min, centers);
-  
-  for( int j = 0; j < parameters.getIntParameter("dictionary_length"); ++ j){
-    cv::Mat image;
-    std::stringstream tt;
-    std::string name;
-
-    for( int i = 0; i <= 7 ; ++i ){
-      image.push_back(centers(cv::Range(j, j+1), cv::Range(i*8,(i+1)*8)));
-    }
-    
-    image = image*(255.0/(max-min));  
-    
-    tt << parameters.getStringParameter("dictionary_save_path") << j << ".jpg";
-    tt >> name; 
-    
-    imwrite(name, image);
-  }  
-  
-  std::stringstream tt;
-  std::string name;
-  
-  tt << parameters.getStringParameter("dictionary_save_path") << "zcadata.txt";
-  tt >> name;
-  
-  std::ofstream outputfile;
-  outputfile.open( name );
-  
-  outputfile << u << std::endl;
-  outputfile << "w" << std::endl;
-  outputfile << w << std::endl;
-  
-  outputfile.close();
-  
+  cv::FileStorage fs(parameters.getStringParameter("dictionary_save_path") + "dictdata.yml", cv::FileStorage::WRITE);
+  if(fs.isOpened() != 1){
+    std::cout << "Cannot open " << parameters.getStringParameter("dictionary_save_path") + "dictdata.yml" << " exiting.." << std::endl;
+    exit(0);
+  }
+  fs << "Dictionary" << centers;
+  fs << "matmean" << matmean;
+  fs << "zca" << zca;
+  fs.release();  
 }
 
 void Dictionary::read(){
-  std::cout << "-----Loading Dictionary-----" << std::endl;
-  //int sz = 64;
   
-  for(int i = 0; i < parameters.getIntParameter("dictionary_length"); ++ i){
-    cv::Mat1f image;
-    std::stringstream tt;
-    std::string name;
-    std::cout << "reading dictionary element " << i+1 << " of " << parameters.getIntParameter("dictionary_length") << std::endl;
-    tt << parameters.getStringParameter("dictionary_save_path") << i << ".jpg";
-    tt >> name;
-    
-    image = cv::imread(  name , cv::IMREAD_GRAYSCALE );
-    if(! image.data ){
-      std::cout << "could not read image " << name << std::endl;
-    }
-    image = image/255;
-    centers.push_back((image.reshape(0, 1)));
+  cv::FileStorage fs(parameters.getStringParameter("dictionary_save_path") + "dictdata.yml", cv::FileStorage::READ);
+  if(fs.isOpened() != 1){
+    std::cout << "Cannot open " << parameters.getStringParameter("dictionary_save_path") + "dictdata.yml" << " exiting.." << std::endl;
+    exit(0);
   }
-  
-  std::ifstream infile;
-  std::stringstream ss;
-  std::string name;
-  ss << parameters.getStringParameter("dictionary_save_path") << "zcadata.txt";
-  ss >> name;
-  
-  infile.open( name );
-  cv::Mat *outputmatrix = &u;
-  float num;
-  
-  while (!infile.eof()){
-    std::string line, param;
-    std::string file;
-    std::stringstream tt;
-    cv::Mat row;
-    getline(infile,line);
-    tt<<line;
-    while( tt>>param ){
-      if(param == "w"){
-	outputmatrix = &w;
-	break;
-      }
-      
-      if( param[0] == '[' ){
-	std::istringstream(param.substr(param.find('[')+1)) >> num;
-	row.push_back(num);
-      }
-      else if( param.find(']') != std::string::npos ){
-	std::istringstream(param.erase(param.find(']'))) >> num;
-	row.push_back(num);
-	break;
-      }
-      else{
-	std::istringstream(param) >> num;
-	row.push_back(num);
-      }
-    }
-    if((param != "w") && (param != "")){
-      outputmatrix->push_back(row.reshape(0,1));
-    }
-  }    
-  
-  infile.close();
-  cv::Mat D(w.rows,w.rows,CV_32F);
-  D = D.diag(w);
-  cv::Mat utranspose;
-  cv::transpose(u, utranspose);
-  zca = u*D*utranspose;
+    
+  fs["Dictionary"] >> centers;
+  fs ["matmean"] >> matmean;
+  fs ["zca"] >> zca;
+  fs.release();
 }
   
 void Dictionary::zcawhiten( cv::Mat & samples ){
+  // TODO: make sure samples are zero-mean
+  cv::Scalar stddev;
+  cv::meanStdDev(samples, matmean, stddev);
+  cv::subtract(samples, matmean[0], samples);
   
   //apply ZCA whitening
   cv::Mat sigma, vt;
   cv::Mat samplestranspose, utranspose;
   cv::transpose(samples, samplestranspose);
-  samples.convertTo(samples, CV_32FC1);
-  samplestranspose.convertTo(samplestranspose, CV_32FC1);
   sigma = samplestranspose*samples/(samples.rows);
-  cv::SVD::compute(sigma, w, u, vt);
+  cv::SVD::compute(sigma, w, u, vt, cv::SVD::FULL_UV);
   cv::transpose(u, utranspose);
-  w = w+0.1;
+  w = w + 0.001;
   cv::sqrt(w,w);
   w = 1./w;
   cv::Mat D(w.rows,w.rows,CV_32F); 
@@ -170,34 +89,16 @@ void Dictionary::zcawhiten( cv::Mat & samples ){
   zca = u*D*utranspose;
   samples = samples*zca;
   
-  double min;
-  double max;
-  cv::Point minLoc;
-  cv::Point maxLoc;
-  
-  cv::minMaxLoc(samples, &min, &max, &minLoc, &maxLoc);
-		
-  cv::add(samples, -min, samples);
-  
-  samples = samples*(255.0/(max-min));
-  
 }
 
 void Dictionary::zcawhitener( cv::Mat & samplesin ) const{
  
   //apply ZCA whitening
-  cv::Mat samplestranspose, utranspose, samples;
-  samples = samplesin;
+  cv::Mat samples = samplesin;
   samples = samples.reshape(0,1);
+  cv::subtract(samples, matmean[0], samples);
   samples = samples*zca;
   
-  double min;
-  double max;
-  cv::Point minLoc;
-  cv::Point maxLoc;
-  cv::minMaxLoc(samples, &min, &max, &minLoc, &maxLoc);
-  cv::add(samples, -min, samples);
-  samples = samples*(1.0/(max-min));
 }
 
 void Dictionary::getfilenames( std::vector<std::string>& filenames ){
@@ -222,9 +123,6 @@ void Dictionary::getfilenames( std::vector<std::string>& filenames ){
 	tt>>param;
 	file = param.substr(param.find('"')+1);
 	file = file.erase(file.find('"'));
-    
-	cv::Mat1f image(32, 32);
-	cv::Mat1f originalimage;
 	
 	std::cout << parameters.getStringParameter("dictionary_path") + file << std::endl;
 	filenames.push_back(parameters.getStringParameter("dictionary_path") + file);
@@ -245,7 +143,7 @@ void Dictionary::getsubimages( cv::Mat& samples, std::string filename ){
   if(! originalimage.data ){
     std::cout << "could not read image " << filename << std::endl;
   }
-  
+
   cv::resize(originalimage, image, image.size());
   
   //extract 8x8 subpca whiteningimages
@@ -254,7 +152,7 @@ void Dictionary::getsubimages( cv::Mat& samples, std::string filename ){
       cv::Mat1f subimage(8,8);
       subimage = image(cv::Range(y,y+8), cv::Range(x,x+8)).clone();
       
-      normalise(subimage);
+      subimage /= 255.f;
       
       //add processed subimage to sample matrix to be passed to kmeans algorithim
       samples.push_back((subimage.reshape(0, 1)));
@@ -262,33 +160,10 @@ void Dictionary::getsubimages( cv::Mat& samples, std::string filename ){
   }
 }
 
-void Dictionary::normalise( cv::Mat1f & matrix ){
-  
-  //brightness normalise
-  cv::Scalar matmean;
-  cv::Scalar stddev;
-  cv::meanStdDev(matrix, matmean, stddev);
-  cv::subtract(matrix, matmean[0], matrix);
-  //std::cout << "here1.1" << std::endl;
-  // FIXME
-  //contrast normalise and remap to 0-1 range
-  cv::meanStdDev(matrix, matmean, stddev);
-  if( stddev[0] != 0.0 ){
-    matrix = matrix*(0.5/(1.0*stddev[0]));
-  }
-  //std::cout << "here1.2" << std::endl;
-  cv::add(matrix, 0.5, matrix);
-  //std::cout << "here1.3" << std::endl;
-  for(int i=0; i<matrix.size().width; ++i){
-    for(int j=0; j<matrix.size().height; ++j){
-      if( matrix.at<float>(j,i) < 0.0 )
-	matrix.at<float>(j,i) = 0.0;
-      else if ( matrix.at<float>(j,i) > 1)
-	matrix.at<float>(j,i) = 1.0;      
-    }
-  }
-  //std::cout << "here1.4" << std::endl;
-}
+
+
+
+
 //   std::vector<Rectangle*> textboxes;
 //   
 //   getTextBoxes(parameters.getStringParameter("image_path_1"),  "apanar_06.08.2002/IMG_1305.JPG", textboxes );

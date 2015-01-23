@@ -26,9 +26,9 @@ public:
   void generate();
   void read();
   void zcawhitener( cv::Mat & samplesin ) const;
-  void normalise( cv::Mat1f & matrix );
   cv::Mat1f centers;
   cv::Mat w, u, zca;
+  cv::Scalar matmean;
   
 private:
   

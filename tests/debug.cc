@@ -44,6 +44,54 @@ int main( int argc, char** argv )
   std::string parameterfile = "debug.par";
   CHECK_MSG( parameters.readFile(parameterfile), "Could not read config file");
   
+//   //using namespace cv;
+//   
+//     cv::FileStorage fs(parameters.getStringParameter("dictionary_save_path") + "dictdata.yml", cv::FileStorage::WRITE);
+//     std::cout << "here" << std::endl;
+//     fs << "frameCount" << 5;
+//   if(fs.isOpened() != 1){
+//     std::cout << "Cannot open " << parameters.getStringParameter("dictionary_save_path") + "dictdata.yml" << " exiting.." << std::endl;
+//     exit(0);
+//   }
+//   cv::Mat1f one;
+//   cv::Mat1f two;
+//   cv::Mat1f three;
+//   one.push_back(4);
+//   one.push_back(7);
+//   two.push_back(5);
+//   three.push_back(6);
+//     std::cout << one << std::endl;
+//   fs << "Dictionary" << one;
+//   fs << "matmean" << two;
+//   fs << "zca" << three;
+//   fs.release();
+//   std::cout << "here" << std::endl;
+//   
+//   
+//   
+//   
+//     cv::FileStorage fs2(parameters.getStringParameter("dictionary_save_path") + "dictdata.yml", cv::FileStorage::READ);
+//   if(fs2.isOpened() != 1){
+//     std::cout << "Cannot open " << parameters.getStringParameter("dictionary_save_path") + "dictdata.yml" << " exiting.." << std::endl;
+//     exit(0);
+//   }
+//       cv::Mat1f tone;
+//   cv::Mat1f ttwo;
+//   cv::Mat1f tthree;
+//   fs2["Dictionary"] >> tone;
+//   fs2 ["matmean"] >> ttwo;
+//   fs2 ["zca"] >> tthree;
+//   fs2.release();
+//   
+//   std::cout << tone << std::endl;
+//   std::cout << ttwo << std::endl;
+//   std::cout << tthree << std::endl;
+//   exit(0);
+  
+  
+  
+  
+  
   //Initialise objects
   Dictionary dict(parameters);
   if(parameters.getIntParameter("generate_bit") == 1){
