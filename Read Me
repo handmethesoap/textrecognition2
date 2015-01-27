@@ -1,0 +1,14 @@
+In order to operate this text detection code the parameters in parameters.par must be set and palced in the same folder as the executible.
+
+A path to training data for the dictionary generation must be provided as well as to the training data for the text recognition and to test data.
+
+A dictionary must either be already generated or be generated when running the program. The folder in which the dictionary is to be read
+from or saved to as well as the flag controlling generation are set in parameters.par.
+
+Train data must also be either generated or read and the save or read location as well as generate flag is set in parameters.par
+
+The dictionary size, numbers of images to process and window sizes to use when searching for text are also all set in parameters.par
+
+For more information on the techniques used in this text recognition code refer to:
+Coates, Adam, et al. "Text detection and character recognition in scene images with unsupervised feature learning." Document Analysis and Recognition (ICDAR), 2011 International Conference on. IEEE, 2011.
+

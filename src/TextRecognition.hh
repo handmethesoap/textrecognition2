@@ -38,8 +38,6 @@ public:
   void testN(uint n);
   void readScores(void);
   
-  void normalise( cv::Mat1f & matrix );
-  void zcaWhiten( cv::Mat1f & matrix);
   void computeFeatureRepresentation(cv::Mat1f & subimage, cv::Mat1f & reducedfeatures );
   void printText(std::string image);
   
@@ -54,7 +52,6 @@ private:
   void printm(cv::Mat mat, int prec);
   
   void saveTrainData(void);
-  void readTrainData(void);
   
   void storeScores(cv::Mat1f & image, std::string imageName);
   void saveScores(void);

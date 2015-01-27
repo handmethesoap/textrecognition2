@@ -10,22 +10,26 @@ void TextRecognition::train(void){
   int notext_samples = 0;
   uint image_n = 0;
   
+  //loop through all of the training images
   while( (image_n < trainImageNames.size())
          && ((notext_samples < sample_max) || (text_samples < sample_max)) )
   {
     
+    //read in taining image
     cv::Mat1f trainImage = cv::imread(  parameters.getStringParameter("recognition_train_path") + trainImageNames[image_n] , cv::IMREAD_GRAYSCALE );
     trainImage = trainImage/255.f;
     
     
-    
+    //set window size
     int w_size = 64;  
     
+    //extract all windows from training image
     for(int j = 0; j < trainImage.size().height - w_size; j+=(w_size/4)){
       for(int i = 0; i < trainImage.size().width - w_size; i+=(w_size/4)){
 	
 	  bool type = isText(trainImageNames[image_n], i, j, w_size, trainImageNames, trainTextBoxes);
 	  
+	  //If windows does not contain text and the number of non-text samples is less than the limit process it for training
 	  if( (type == 0) && (notext_samples < sample_max) ){
 	    ++notext_samples;
 	    datatype.push_back(type);
@@ -33,28 +37,14 @@ void TextRecognition::train(void){
 	    cv::Mat1f subimage(32,32);
 	    cv::resize(usubimage, subimage, subimage.size());
 	    
-	    if(parameters.getIntParameter("debug_flag") == 1){
-	      std::cout << "Subimage" << std::endl;
-	      printm(subimage, 2);
-	    }
-	    
 	    cv::Mat1f reducedfeatures;	    
 	    computeFeatureRepresentation(subimage, reducedfeatures);
 	    cv::Mat reducedfeatures2;
 	    reducedfeatures.convertTo(reducedfeatures2, CV_32F);
-	    
-	    if(parameters.getIntParameter("debug_flag") == 1){
-	      std::cout << "reduced features" << std::endl;
-	      printm(reducedfeatures2, 4);
-	    }
-	    
-	    if(parameters.getIntParameter("debug_flag") == 1){
-	      std::cout << "Exiting" << std::endl;
-	      exit(0);
-	    }
 	  
 	    traindata.push_back(reducedfeatures2.reshape(0,1));
 	  }
+	  //If windows does contains text and the number of text samples is less than the limit process it for training
 	  else if( (type == 1) && (text_samples < sample_max) ){
 	    ++text_samples;
 	    datatype.push_back(type);
@@ -62,25 +52,11 @@ void TextRecognition::train(void){
 	    cv::Mat1f subimage(32,32);
 	    cv::resize(usubimage, subimage, subimage.size());
 	    
-	    if(parameters.getIntParameter("debug_flag") == 1){
-	      std::cout << "Subimage" << std::endl;
-	      printm(subimage, 2);
-	    }
-	    
 	    cv::Mat1f reducedfeatures;
 	    computeFeatureRepresentation(subimage, reducedfeatures);
 	    cv::Mat reducedfeatures2;
 	    reducedfeatures.convertTo(reducedfeatures2, CV_32F);
 	    
-	    if(parameters.getIntParameter("debug_flag") == 1){
-	      std::cout << "reduced features" << std::endl;
-	      printm(reducedfeatures2, 4);
-	    }
-	    
-	    if(parameters.getIntParameter("debug_flag") == 1){
-	      std::cout << "Exiting" << std::endl;
-	      exit(0);
-	    }
 	    traindata.push_back(reducedfeatures2.reshape(0,1));
 	  }
       }
@@ -110,7 +86,6 @@ void TextRecognition::test(std::string testFile){
   cv::Mat1f testImage = cv::imread(  parameters.getStringParameter("test_path") + testFile , cv::IMREAD_GRAYSCALE );
   std::cout << testImage.size().width << ", " << testImage.size().height << std::endl;
   testImage = testImage/255.0;
-  //normalise(testImage);
   
   int min_win = parameters.getIntParameter("min_window_size");  
   int max_win = parameters.getIntParameter("max_window_size");  
@@ -119,13 +94,14 @@ void TextRecognition::test(std::string testFile){
   cv::Mat1f textImage = cv::Mat1f::ones(testImage.size().height, testImage.size().width);
   textImage = textImage*(-100);
   
-
+  //loop through the different test sizes for the image
   for(int w_size = min_win; w_size <= max_win; w_size += win_inc){
 
       std::cout << "testing with subimage size of " << w_size << std::endl;
 
       cv::Mat1f imageMask = cv::Mat1f::ones(w_size, w_size);
-
+      
+      //extract samples in the sliding window fashion
       for(int j = 0; j <= testImage.size().height - w_size; j+=w_size){
 
           if(testImage.size().height < w_size){
@@ -137,31 +113,16 @@ void TextRecognition::test(std::string testFile){
               if(testImage.size().width < w_size){
                   break;
               }
-
-              //std::cout << testImage.size().width << ", " << testImage.size().height << ", " << i << ", " << j << std::endl;
+	      
               cv::Mat1f usubimage = testImage(cv::Range(j,j+w_size), cv::Range(i,i+w_size)).clone();
               cv::Mat1f subimage(32,32);
               cv::resize(usubimage, subimage, subimage.size());
 
               cv::Mat1f reducedfeatures;
               cv::Mat reducedfeatures2;
-
-              if(parameters.getIntParameter("debug_flag") == 1){
-                  std::cout << "Subimage" << std::endl;
-                  printm(subimage, 2);
-              }
+              
               computeFeatureRepresentation(subimage, reducedfeatures);
               reducedfeatures.convertTo(reducedfeatures2, CV_32F);
-
-              if(parameters.getIntParameter("debug_flag") == 1){
-                  std::cout << "output reduced feature matrix" << std::endl;
-                  printm(reducedfeatures2, 4);
-              }
-
-              if(parameters.getIntParameter("debug_flag") == 1){
-                  std::cout << "Exiting" << std::endl;
-                  exit(0);
-              }
 
               float predictResult = linearSVM.predict(reducedfeatures2.reshape(0,1), true);
               cv::max(imageMask*predictResult, textImage(cv::Range(j,j+w_size), cv::Range(i,i+w_size)), textImage(cv::Range(j,j+w_size), cv::Range(i,i+w_size)));
@@ -181,14 +142,6 @@ void TextRecognition::test(std::string testFile){
 
   }
   storeScores(textImage, testFile);
-
-//     std::cout << testFile << std::endl;
-//     normalise(textImage);
-//     cv::imwrite("sample_image.jpg", textImage*255);
-//     cv::namedWindow( "Display window", cv::WINDOW_NORMAL );// Create a window for display.
-//     cv::imshow( "Display window", textImage);
-//     cv::waitKey(0);
-//     cv::destroyWindow("Display window");
 }
 
 void TextRecognition::readLocationData(std::string fileName, std::vector<std::string> & imageNames,
@@ -328,82 +281,30 @@ void TextRecognition::computeFeatureRepresentation(cv::Mat1f & subimage, cv::Mat
 
           //extract subsubimages
           cv::Mat1f subsubimage = subimage(cv::Range(k,k+8), cv::Range(l,l+8)).clone();
-
-          if(parameters.getIntParameter("debug_flag") == 1){
-              if( (k == 0) && (l == 0) ){
-                  std::cout << "Subsubimage" << std::endl;
-                  printm(subsubimage, 4);
-              }
-          }
-
-          //	normalise(subsubimage);
-
-
-          if(parameters.getIntParameter("debug_flag") == 1){
-              if( (k == 0) && (l == 0) ){
-                  std::cout << "Normalised Subsubimage" << std::endl;
-                  printm(subsubimage, 4);
-              }
-          }
+	  //whiten
           dict.zcawhitener( subsubimage );
-
-          if(parameters.getIntParameter("debug_flag") == 1){
-              if( (k == 0) && (l == 0) ){
-                  std::cout << "Whitened Subsubimage" << std::endl;
-                  printm(subsubimage, 4);
-              }
-          }
-          //compute dot product with dictionary
-          // possible speedup: use gemm (i.e. matrix multiplication)
+	  
           features.push_back((subsubimage.reshape(0, 64)));
 
 
       }
   }
-//  features.rows == 1 && features.cols == 64 * 25 * 25;
 
-  cv:: Mat1f features2 = features.reshape(0,625); // NOTE: this is 625 rows
-  
-  if(parameters.getIntParameter("debug_flag") == 1){
-    std::cout << "Subimage in feature matrix" << std::endl;
-    printm(features2.row(0), 2);
-  }
+  cv:: Mat1f features2 = features.reshape(0,625);
   
   cv::Mat1f features3;
   
   for( int m = 0; m < parameters.getIntParameter("dictionary_length"); ++m){
     cv::Mat1f temp1 = (dict.centers.row(m).reshape(0,64));
     
-    if(parameters.getIntParameter("debug_flag") == 1){
-      std::cout << "Dictionary element " << m << std::endl;
-      printm(temp1.reshape(0,1), 2);
-    }
-    
     cv::Mat1f temp = features2*temp1;
     features3.push_back(temp);
     
-    if(parameters.getIntParameter("debug_flag") == 1){
-      std::cout << "dictionary subsubimage dot product" << std::endl;
-      printm(temp.row(0), 2);
-    }
   }
-  
-  if(parameters.getIntParameter("debug_flag") == 1){
-    std::cout << "saved dictionary subsubimage dot product" << std::endl;
-    printm(features3.row(0), 2);
-  }
-    
 
-  
   //reshape so each row is the result the dot product of each 8*8 subsubimage with a single dictionary element 
   cv::Mat1f features4 = features3.reshape(0,parameters.getIntParameter("dictionary_length"));
-  
-  if(parameters.getIntParameter("debug_flag") == 1){
-    std::cout << "rearranged feature matrix (is this correct?) " << features4.size() << std::endl;
-    printm(features4.row(0), 2);
-  }
-
-  
+    
   reduceFeatures(features4, reducedfeatures);
 }
 
@@ -414,84 +315,21 @@ void TextRecognition::reduceFeatures( cv::Mat1f & featurerepresentation, cv::Mat
     cv::Mat1f dictmatrix = featurerepresentation.row(i);
     cv::Mat1f dictmatrix2 = dictmatrix.reshape(0,25);
     
-    if(parameters.getIntParameter("debug_flag") == 1){
-      if(i == 0){
-	std::cout << "rearranged dictionary element 0 dot product matrix" << std::endl;
-	printm(dictmatrix2,2);
-      }
-    }
-    
+    //use spatial pooling to reduce features
     for(int k = 0; k < 3; ++k){
       for(int l = 0; l < 3; ++l){
 	
 	reducedfeatures.push_back( (cv::sum(dictmatrix2(cv::Range(k*8, k*8+9), cv::Range(l*8,l*8+9)))[0]) );
 	
-	if(parameters.getIntParameter("debug_flag") == 1){
-	  if( i == 0 ){
-	    std::cout << std::setprecision(6) << "matrix for reduction, average = " << (cv::sum(dictmatrix2(cv::Range(k*8, k*8+9), cv::Range(l*8,l*8+9)))[0]) <<  std::endl;
-	    //printm(dictmatrix2(cv::Range(k*8, k*8+9), cv::Range(l*8,l*8+9)),2);
-	  }
-	}
     
       }
     }
   }
   
 }
-
-void TextRecognition::normalise( cv::Mat1f & matrix ){
-  
-  //brightness normalise
-  cv::Scalar matmean;
-  cv::Scalar stddev;
-  cv::meanStdDev(matrix, matmean, stddev);
-  cv::subtract(matrix, matmean[0], matrix);
-  //std::cout << "here1.1" << std::endl;
-  // FIXME
-  //contrast normalise and remap to 0-1 range
-  cv::meanStdDev(matrix, matmean, stddev);
-  if( stddev[0] != 0.0 ){
-    matrix = matrix*(0.5/(1.0*stddev[0]));
-  }
-  //std::cout << "here1.2" << std::endl;
-  cv::add(matrix, 0.5, matrix);
-  //std::cout << "here1.3" << std::endl;
-  for(int i=0; i<matrix.size().width; ++i){
-    for(int j=0; j<matrix.size().height; ++j){
-      if( matrix.at<float>(j,i) < 0.0 )
-	matrix.at<float>(j,i) = 0.0;
-      else if ( matrix.at<float>(j,i) > 1)
-	matrix.at<float>(j,i) = 1.0;      
-    }
-  }
-  //std::cout << "here1.4" << std::endl;
-}
-
-void TextRecognition::zcaWhiten( cv::Mat1f & matrix){
-  //apply ZCA whitening
-  cv::Mat sigma, w_, u, vt;
-  cv::Mat subimagetranspose, utranspose;
-  cv::transpose(matrix, subimagetranspose);
-  sigma = matrix*subimagetranspose/8;
-  cv::SVD::compute(sigma, w_, u, vt);
-  cv::transpose(u, utranspose);
-  w_ = w_+0.1;
-  cv::sqrt(w_,w_);
-  w_ = 1./w_;
-  cv::Mat D(8,8,CV_32F); 
-  D = D.diag(w_);
-  matrix = u*D*utranspose*matrix;
-}	
+	
 
 void TextRecognition::saveTrainData(void){
-//   std::ofstream outputfile;
-//   outputfile.open( parameters.getStringParameter("data_file") );
-//   
-//   outputfile << traindata << std::endl;
-//   outputfile << "data type" << std::endl;
-//   outputfile << datatype << std::endl;
-//   
-//   outputfile.close();
   
   cv::FileStorage fs(parameters.getStringParameter("data_file"), cv::FileStorage::WRITE);
   if(fs.isOpened() != 1){
@@ -516,13 +354,6 @@ void TextRecognition::loadTrainData( void ){
   fs ["datatype"] >> datatype;
   fs.release();
   
-  
-  
-  
-//   readTrainData();
-//   traindata.convertTo(traindata, CV_32F);
-//   datatype.convertTo(datatype, CV_32F);
-  
   std::cout << "loading complete" << std::endl;
   
   std::cout << "linear SVM training underway" << std::endl;
@@ -538,49 +369,8 @@ void TextRecognition::loadTrainData( void ){
   
 }
 
-void TextRecognition::readTrainData(void){
-  std::ifstream infile;
-  infile.open( parameters.getStringParameter("data_file") );
-  cv::Mat *outputmatrix = &traindata;
-  int num;
-  
-  while (!infile.eof()){
-    std::string line, param;
-    std::string file;
-    std::stringstream tt;
-    cv::Mat row;
-    getline(infile,line);
-    tt<<line;
-    while( tt>>param ){
-      if(param == "data"){
-	outputmatrix = &datatype;
-	break;
-      }
-      
-      if( param[0] == '[' ){
-	std::istringstream(param.substr(param.find('[')+1)) >> num;
-	row.push_back(num);
-      }
-      else if( param.find(']') != std::string::npos ){
-	std::istringstream(param.erase(param.find(']'))) >> num;
-	row.push_back(num);
-	break;
-      }
-      else{
-	std::istringstream(param) >> num;
-	row.push_back(num);
-      }
-    }
-    if((param != "data") && (param != "")){
-      outputmatrix->push_back(row.reshape(0,1));
-    }
-  }    
-  
-  infile.close();
-}
-
 void TextRecognition::storeScores(cv::Mat1f & image, std::string imageName){
-  //std::cout << image << std::endl;
+
   for(int j = 0; j < image.size().height; ++j){
     for(int i = 0; i < image.size().width; ++i){
       if(isText(imageName, i, j, 1, testImageNames, testTextBoxes)){
@@ -727,12 +517,12 @@ void TextRecognition::generatePRData(void){
   int tempText = 0;
   int tempNonText = 0;
   
+  //calculate precision and recall values for 1000 threshold values
   for(int i = 1000; i > 0; --i){
    
 
     while(sortedTextScores.at<float>(tempText,0) >= i){
       ++tempText;
-      //std::cout << tempText << std::endl;
     }
    while(sortedNonTextScores.at<float>(tempNonText,0) >= i){
       ++tempNonText;

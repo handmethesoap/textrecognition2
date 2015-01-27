@@ -63,9 +63,5 @@ int main( int argc, char** argv )
     recogniseText.loadTrainData();
   }
   recogniseText.testAll();
-  //recogniseText.readScores();
-//   recogniseText.testAll();
-  
-//   recogniseText.readScores();
   return 0;
 }

@@ -1,0 +1,28 @@
+recognition_train_path ../../../textrecognition/images/Reading-Location/SceneTrialTrain/
+
+test_path ../../../textrecognition/images/Reading-Location/SceneTrialTest/
+test_file ryoungt_05.08.2002/bPICT0020.JPG
+
+
+kmeans_attempts 5
+kmeans_iter 1000
+kmeans_eps 0.001
+
+subimage_size 80
+
+dictionary_length 32
+dictionary_save_path dictionaryimages32/
+dictionary_path ../../../textrecognition/images/OCR/Train/
+dictionary_source_images 12000
+
+min_window_size 32
+max_window_size 192
+window_increment 16
+
+num_samples 30000
+data_file train_data.yml
+scores_file tempscores.txt
+graph_file graphdata.dat
+
+train_bit 1
+generate_bit 1
